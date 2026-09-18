@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#101010" />
+    <meta
+      name="description"
+      content="Generative Thoughts — a local-first writing and generative carousel studio."
+    />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+    <title>Generative Thoughts</title>
+  </head>
+  <body>
+    <div class="grain" aria-hidden="true"></div>
+
+    <section class="lock-screen" id="lockScreen" aria-labelledby="lockTitle">
+      <div class="lock-card">
+        <div class="lock-mark" aria-hidden="true">GT</div>
+        <p class="eyebrow">Private on this device</p>
+        <h1 id="lockTitle">Generative Thoughts</h1>
+        <p class="lock-copy" id="lockCopy">
+          Create a passcode for this browser. Your writing stays here unless you export it.
+        </p>
+        <form id="lockForm">
+          <label for="passcode">Passcode</label>
+          <input
+            id="passcode"
+            name="passcode"
+            type="password"
+            minlength="4"
+            autocomplete="current-password"
+            placeholder="4 or more characters"
+            required
+          />
+          <button class="button button--primary button--wide" id="unlockButton" type="submit">
+            Set passcode
+          </button>
+          <p class="form-error" id="lockError" role="alert"></p>
+        </form>
+        <p class="security-note">
+          This is a personal privacy gate, not server security. Clearing browser data also clears
+          your saved work.
+        </p>
+      </div>
+    </section>
+
+    <div class="app" id="app" hidden>
+      <header class="topbar">
+        <a class="brand" href="#studio" aria-label="Generative Thoughts home">
+          <span class="brand-mark" aria-hidden="true">GT</span>
+          <span>Generative Thoughts</span>
+        </a>
+        <div class="topbar-actions">
+          <span class="saved-state" id="savedState">Saved locally</span>
+          <button class="icon-button" id="lockButton" type="button" aria-label="Lock studio" title="Lock studio">
+            <span aria-hidden="true">⌁</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="workspace" id="studio">
+        <section class="composer" aria-labelledby="composerTitle">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Writing</p>
+              <h1 id="composerTitle">Thought <span id="thoughtNumber">001</span></h1>
+            </div>
+            <button class="button button--quiet" id="newButton" type="button">New</button>
+          </div>
+
+          <label class="visually-hidden" for="thoughtInput">Your thought</label>
+          <textarea
+            id="thoughtInput"
+            maxlength="5000"
+            spellcheck="true"
+            placeholder="Write a thought. Your words will not be rewritten."
+          ></textarea>
+
+          <div class="text-meta">
+            <span><strong id="characterCount">0</strong> / 5,000</span>
+            <span class="integrity-state"><span aria-hidden="true">●</span> Text intact</span>
+          </div>
+
+          <div class="control-grid">
+            <label class="field">
+              <span>Pattern</span>
+              <select id="patternSelect">
+                <option value="orbit">Orbit</option>
+                <option value="weave">Weave</option>
+                <option value="signal">Signal</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Palette</span>
+              <select id="paletteSelect">
+                <option value="ink">Ink + ember</option>
+                <option value="blue">Electric blue</option>
+                <option value="acid">Acid field</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="composer-actions">
+            <button class="button button--primary" id="saveButton" type="button">Save thought</button>
+            <button class="button button--secondary" id="randomizeButton" type="button">
+              Randomize pattern
+            </button>
+          </div>
+
+          <details class="archive" id="archiveDetails">
+            <summary>
+              <span>Index</span>
+              <span class="archive-count" id="archiveCount">0</span>
+            </summary>
+            <div class="archive-list" id="archiveList"></div>
+          </details>
+        </section>
+
+        <section class="preview-panel" aria-labelledby="previewTitle">
+          <div class="preview-heading">
+            <div>
+              <p class="eyebrow">Instagram carousel · 4:5</p>
+              <h2 id="previewTitle">Preview</h2>
+            </div>
+            <span class="slide-count" id="slideCount">01 / 01</span>
+          </div>
+
+          <div class="canvas-wrap">
+            <div id="previewCanvas" role="img" aria-label="Generated p5.js post preview"></div>
+            <p class="canvas-placeholder" id="canvasPlaceholder">Start writing to generate.</p>
+          </div>
+
+          <div class="slide-controls" aria-label="Slide navigation">
+            <button class="icon-button icon-button--light" id="previousSlide" type="button" aria-label="Previous slide">←</button>
+            <div class="slide-dots" id="slideDots" aria-hidden="true"></div>
+            <button class="icon-button icon-button--light" id="nextSlide" type="button" aria-label="Next slide">→</button>
+          </div>
+
+          <div class="export-actions">
+            <button class="button button--light" id="downloadCurrent" type="button">Download slide</button>
+            <button class="button button--light" id="downloadAll" type="button">Download all</button>
+            <button class="button button--accent" id="shareButton" type="button">Share</button>
+          </div>
+          <p class="export-note" id="exportNote">
+            Exports are 1080 × 1350 PNG. On iPhone, Share opens the native share sheet.
+          </p>
+        </section>
+      </main>
+
+      <footer>
+        <span>Local-first prototype · v0.1</span>
+        <button id="resetPasscode" type="button">Reset local studio</button>
+      </footer>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>
