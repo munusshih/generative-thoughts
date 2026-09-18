@@ -48,7 +48,7 @@ const elements = Object.fromEntries(
     "signalReadout", "modelButton", "saveButton", "randomizeButton", "newButton", "savedState",
     "archiveCount", "archiveList", "previewCanvas", "canvasPlaceholder", "slideType", "slideCount", "sequence",
     "sequenceStatus", "previousSlide", "nextSlide", "downloadCurrent", "downloadVideo", "downloadAll", "publishButton", "exportNote",
-    "resetPasscode", "instagramSettings", "instagramDialog", "instagramAccount", "instagramBackend", "apiBaseInput",
+    "resetPasscode", "resetLockedIndex", "instagramSettings", "instagramDialog", "instagramAccount", "instagramBackend", "apiBaseInput",
     "captionInput", "saveInstagramSettings", "confirmPublish", "instagramMessage", "toast",
   ].map((id) => [id, document.querySelector(`#${id}`)])
 );
@@ -1033,8 +1033,22 @@ function showToast(message) {
   toastTimer = setTimeout(() => elements.toast.classList.remove("is-visible"), 2400);
 }
 
-function resetStudio() {
-  if (!window.confirm("Reset the local index? This removes the passphrase and every saved thought from this browser.")) return;
+let resetArmed = false;
+let resetArmTimer;
+function resetStudio(event) {
+  const button = event?.currentTarget;
+  if (!resetArmed) {
+    resetArmed = true;
+    button.textContent = "CONFIRM RESET / DELETE LOCAL WRITING";
+    clearTimeout(resetArmTimer);
+    resetArmTimer = setTimeout(() => {
+      resetArmed = false;
+      button.textContent = button === elements.resetLockedIndex
+        ? "FORGOT PASSPHRASE / RESET LOCAL INDEX"
+        : "RESET LOCAL INDEX";
+    }, 15000);
+    return;
+  }
   Object.values(STORAGE).forEach((key) => localStorage.removeItem(key));
   window.location.reload();
 }
@@ -1091,6 +1105,7 @@ elements.instagramSettings.addEventListener("click", openInstagramDialog);
 elements.saveInstagramSettings.addEventListener("click", saveInstagramServer);
 elements.confirmPublish.addEventListener("click", publishToInstagram);
 elements.resetPasscode.addEventListener("click", resetStudio);
+elements.resetLockedIndex.addEventListener("click", resetStudio);
 
 new p5((sketch) => {
   sketch.setup = () => {
