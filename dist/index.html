@@ -1,83 +1,33 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#e8dfcf" />
-    <meta name="description" content="Generative Thoughts — indexed writing translated into moving diagrams and low-resolution fields." />
-    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css" />
-    <title>Generative Thoughts</title>
-  </head>
-  <body>
-    <div class="app" id="app">
-      <main class="workspace" id="studio">
-        <section class="composer" aria-label="Write a generative thought">
-          <div class="entry-number" aria-label="Current binary index">GT/<span id="binaryNumber">0</span></div>
-          <label class="field field--title" for="titleInput">
-            <span class="sr-only">Title</span>
-            <input id="titleInput" maxlength="90" placeholder="title" />
-          </label>
-          <label class="field field--story" for="thoughtInput">
-            <span class="sr-only">Story</span>
-            <textarea id="thoughtInput" maxlength="5000" spellcheck="true" placeholder="story"></textarea>
-          </label>
-          <div class="primary-actions">
-            <button class="command" id="randomizeButton" type="button">RANDOMIZE</button>
-            <button class="command command--publish" id="publishButton" type="button">PUBLISH</button>
-          </div>
-        </section>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Generative Thoughts</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <main id="app">
+    <section class="workspace">
+      <section class="writing">
+        <textarea id="titleInput" class="title-input" rows="1" spellcheck="true" placeholder="Title"></textarea>
+        <textarea id="thoughtInput" class="thought-input" spellcheck="true" placeholder="Write."></textarea>
+      </section>
 
-        <section class="preview-panel" aria-label="Generated carousel preview">
-          <div class="canvas-wrap">
-            <div id="previewCanvas" role="button" tabindex="0" aria-label="Generated post preview; activate to view the next slide"></div>
-            <p class="canvas-placeholder" id="canvasPlaceholder">TYPE TO BEGIN</p>
-          </div>
-          <p class="preview-count"><span id="slideCount">01/03</span> · TAP IMAGE FOR NEXT</p>
-        </section>
-      </main>
+      <section class="preview">
+        <div id="previewCanvas" class="canvas-shell" tabindex="0" aria-label="Preview. Click to advance."></div>
+      </section>
 
-      <div hidden aria-hidden="true">
-        <span id="savedState"></span><button id="instagramSettings"></button>
-        <span id="thoughtNumber"></span><span id="characterCount"></span><span id="wordCount"></span>
-        <select id="patternSelect"><option value="orbit"></option><option value="axis"></option><option value="vector"></option><option value="halftone"></option><option value="echo"></option><option value="constellation"></option></select>
-        <output id="signalReadout"></output><button id="modelButton"></button><button id="saveButton"></button><button id="newButton"></button>
-        <span id="archiveCount"></span><div id="archiveList"></div><span id="slideType"></span><div id="sequence"></div><span id="sequenceStatus"></span>
-        <button id="previousSlide"></button><button id="nextSlide"></button><button id="downloadCurrent"></button><button id="downloadVideo"></button><button id="downloadAll"></button>
-        <span id="exportNote"></span>
-      </div>
+      <button id="publishButton" class="publish-button" type="button">PUBLISH</button>
+    </section>
+
+    <div id="modelProgress" class="model-progress" aria-hidden="true">
+      <div id="modelProgressFill"></div>
     </div>
 
-    <dialog id="instagramDialog">
-      <form method="dialog" class="dialog-shell">
-        <div class="dialog-heading">
-          <h2>Publish</h2>
-          <button class="text-command" value="cancel">CLOSE</button>
-        </div>
-        <label class="field" for="captionInput">
-          <span class="sr-only">Caption</span>
-          <textarea id="captionInput" maxlength="2200" placeholder="caption"></textarea>
-        </label>
-        <div class="dialog-actions">
-          <button class="command command--publish" id="confirmPublish" type="button">PUBLISH TO INSTAGRAM</button>
-        </div>
-        <p class="dialog-note" id="instagramMessage">SERVER_NOT_CONFIGURED</p>
-        <details class="connection-details">
-          <summary>connection settings</summary>
-          <dl class="connection-status">
-            <div><dt>ACCOUNT</dt><dd id="instagramAccount">NOT_CONFIGURED</dd></div>
-            <div><dt>BACKEND</dt><dd id="instagramBackend">NOT_CONNECTED</dd></div>
-          </dl>
-          <label class="field" for="apiBaseInput">
-            <span>PUBLISH SERVER URL</span>
-            <input id="apiBaseInput" type="url" placeholder="blank for this site" />
-          </label>
-          <button class="command" id="saveInstagramSettings" type="button">SAVE CONNECTION</button>
-        </details>
-      </form>
-    </dialog>
+    <div id="toast" class="toast" role="status"></div>
+  </main>
 
-    <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="./app.js" type="module"></script>
-  </body>
+  <script type="module" src="./app.js"></script>
+</body>
 </html>

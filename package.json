@@ -1,18 +1,17 @@
 {
   "name": "generative-thoughts",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
-  "description": "A local-first p5.js studio for turning intact writing into generative Instagram carousels.",
+  "description": "A local-first writing archive with generative ASCII publishing.",
   "scripts": {
     "dev": "node local-server.mjs",
-    "build": "vite build dist --outDir ../site-dist --emptyOutDir",
     "start": "node local-server.mjs",
+    "build": "vite build dist --outDir ../site-dist --emptyOutDir",
     "check": "npm run build"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.3.0",
     "@ibm/plex-mono": "^2.5.0",
-    "@vercel/blob": "^2.8.0",
     "jszip": "3.10.2",
     "mediabunny": "^1.58.0",
     "p5": "2.3.3"
