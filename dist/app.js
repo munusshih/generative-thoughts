@@ -1,5 +1,12 @@
 import p5 from "p5";
 import JSZip from "jszip";
+import plexMonoUrl from "@ibm/plex-mono/fonts/split/woff2/IBMPlexMono-Regular-Latin1.woff2?url";
+
+const PRINT_FONT = "IBM Plex Mono";
+const fontStyle = document.createElement("style");
+fontStyle.textContent = `@font-face { font-family: "${PRINT_FONT}"; src: url("${plexMonoUrl}") format("woff2"); font-style: normal; font-weight: 100 900; font-display: swap; }`;
+document.head.append(fontStyle);
+const printFontReady = document.fonts.load(`16px "${PRINT_FONT}"`);
 
 const STORAGE = {
   settings: "generative-thoughts.settings.v1",
@@ -9,9 +16,7 @@ const STORAGE = {
 };
 
 const PALETTES = {
-  phosphor: { background: "#050805", foreground: "#b8ffad", dim: "#4f8052", bright: "#f4fff1" },
-  amber: { background: "#100a02", foreground: "#ffbd63", dim: "#8f5a25", bright: "#fff2d6" },
-  mono: { background: "#f2f2ec", foreground: "#101310", dim: "#777b76", bright: "#000000" },
+  paper: { background: "#e8dfcf", foreground: "#17140f", dim: "#6c6457", bright: "#0b0907" },
 };
 
 const state = {
@@ -21,7 +26,7 @@ const state = {
   title: "",
   text: "",
   pattern: "wave",
-  palette: "phosphor",
+  palette: "paper",
   visualSeed: 1,
   mlVector: null,
   mlPipeline: null,
@@ -39,7 +44,7 @@ const elements = Object.fromEntries(
   [
     "app", "lockScreen", "lockForm", "lockCopy", "passcode", "unlockButton", "lockError", "lockButton",
     "titleInput", "thoughtInput", "thoughtNumber", "binaryNumber", "characterCount", "wordCount", "patternSelect",
-    "paletteSelect", "signalReadout", "modelButton", "saveButton", "randomizeButton", "newButton", "savedState",
+    "signalReadout", "modelButton", "saveButton", "randomizeButton", "newButton", "savedState",
     "archiveCount", "archiveList", "previewCanvas", "canvasPlaceholder", "slideType", "slideCount", "sequence",
     "sequenceStatus", "previousSlide", "nextSlide", "downloadCurrent", "downloadAll", "publishButton", "exportNote",
     "resetPasscode", "instagramSettings", "instagramDialog", "instagramAccount", "instagramBackend", "apiBaseInput",
@@ -58,12 +63,11 @@ function loadJSON(key, fallback) {
 
 function migrateEntry(entry) {
   const patternMap = { orbit: "wave", weave: "attractor", signal: "cellular" };
-  const paletteMap = { ink: "mono", blue: "phosphor", acid: "amber" };
   return {
     ...entry,
     title: entry.title || `Untitled ${pad(entry.index || 0)}`,
     pattern: patternMap[entry.pattern] || entry.pattern || "wave",
-    palette: paletteMap[entry.palette] || entry.palette || "phosphor",
+    palette: "paper",
     mlVector: entry.mlVector || null,
     mlStatus: entry.mlStatus || (entry.mlVector ? "MINILM" : "LEXICAL"),
   };
@@ -273,16 +277,28 @@ function drawAsciiField(graphics, phase, opacity = 1) {
   const cellWidth = 1080 / columns;
   const cellHeight = 1350 / rows;
   graphics.push();
-  graphics.textFont("Courier New");
+  graphics.textFont(PRINT_FONT);
   graphics.textSize(22);
   graphics.textStyle(graphics.NORMAL);
   graphics.textAlign(graphics.CENTER, graphics.CENTER);
   graphics.noStroke();
-  graphics.fill(withAlpha(palette.foreground, opacity));
+  graphics.fill(withAlpha(palette.foreground, opacity * 0.84));
   for (let row = 0; row < rows; row += 1) {
     for (let column = 0; column < columns; column += 1) {
       const character = fieldCharacter(column, row, phase, features, seed);
-      if (character !== " ") graphics.text(character, column * cellWidth + cellWidth / 2, row * cellHeight + cellHeight / 2);
+      const mark = stringSeed(`${seed}:${column}:${row}`);
+      if (character !== " " && mark % 19 !== 0) {
+        const jitterX = (((mark >>> 8) % 7) - 3) * 0.22;
+        const jitterY = (((mark >>> 13) % 7) - 3) * 0.18;
+        const x = column * cellWidth + cellWidth / 2 + jitterX;
+        const y = row * cellHeight + cellHeight / 2 + jitterY;
+        graphics.text(character, x, y);
+        if (mark % 31 === 0) {
+          graphics.fill(withAlpha(palette.foreground, opacity * 0.11));
+          graphics.text(character, x + 0.9, y + 0.35);
+          graphics.fill(withAlpha(palette.foreground, opacity * 0.84));
+        }
+      }
     }
   }
   graphics.pop();
@@ -304,7 +320,7 @@ function drawRules(graphics, palette) {
 
 function drawIndexHeader(graphics, palette, left, right) {
   graphics.fill(palette.foreground);
-  graphics.textFont("Courier New");
+  graphics.textFont(PRINT_FONT);
   graphics.textStyle(graphics.NORMAL);
   graphics.textSize(25);
   graphics.textAlign(graphics.LEFT, graphics.BASELINE);
@@ -340,7 +356,7 @@ function fitIndexedText(graphics, text) {
   let size = 50;
   let lines = [];
   while (size >= 31) {
-    graphics.textFont("Courier New");
+    graphics.textFont(PRINT_FONT);
     graphics.textStyle(graphics.NORMAL);
     graphics.textSize(size);
     lines = wrapMonospace(graphics, text.trim(), 850);
@@ -364,7 +380,7 @@ function drawCover(graphics, phase, palette) {
   drawRules(graphics, palette);
   drawIndexHeader(graphics, palette, `GENERATIVE_THOUGHTS / INDEX_${pad(activeNumber())}`, `BINARY_${toBinary(activeNumber())}`);
   graphics.fill(palette.bright);
-  graphics.textFont("Courier New");
+  graphics.textFont(PRINT_FONT);
   graphics.textAlign(graphics.LEFT, graphics.TOP);
   graphics.textStyle(graphics.NORMAL);
   graphics.textSize(92);
@@ -387,7 +403,7 @@ function drawTextSlide(graphics, slide, index, phase, palette) {
   const fitted = fitIndexedText(graphics, slide.content);
   let y = 218;
   graphics.fill(palette.bright);
-  graphics.textFont("Courier New");
+  graphics.textFont(PRINT_FONT);
   graphics.textStyle(graphics.NORMAL);
   graphics.textSize(fitted.size);
   graphics.textAlign(graphics.LEFT, graphics.BASELINE);
@@ -411,7 +427,7 @@ function drawPatternSlide(graphics, phase, palette) {
   graphics.noStroke();
   graphics.rect(64, 1155, 952, 83);
   graphics.fill(palette.foreground);
-  graphics.textFont("Courier New");
+  graphics.textFont(PRINT_FONT);
   graphics.textSize(22);
   graphics.textAlign(graphics.LEFT, graphics.BASELINE);
   graphics.text("[ PATTERN_ONLY / TEXT_SIGNAL_CONTINUES ]", 78, 1205);
@@ -435,7 +451,7 @@ function drawSignalSlide(graphics, phase, palette) {
     ["FIELD_EQUATION", state.pattern.toUpperCase()],
     ["SEMANTIC_SOURCE", state.mlVector ? "LOCAL_TRANSFORMER" : "LOCAL_LEXICAL"],
   ];
-  graphics.textFont("Courier New");
+  graphics.textFont(PRINT_FONT);
   graphics.textStyle(graphics.NORMAL);
   graphics.textSize(28);
   graphics.textAlign(graphics.LEFT, graphics.BASELINE);
@@ -468,10 +484,18 @@ function drawSlide(index, graphics = state.p5, phase = 0) {
   const slide = state.slides[index];
   const palette = PALETTES[state.palette];
   graphics.background(palette.background);
+  graphics.drawingContext.shadowColor = "rgba(23, 20, 15, 0.12)";
+  graphics.drawingContext.shadowBlur = 0.55;
+  graphics.drawingContext.shadowOffsetX = 0.35;
+  graphics.drawingContext.shadowOffsetY = 0.2;
   if (slide.type === "cover") drawCover(graphics, phase, palette);
   else if (slide.type === "text") drawTextSlide(graphics, slide, index, phase, palette);
   else if (slide.type === "pattern") drawPatternSlide(graphics, phase, palette);
   else drawSignalSlide(graphics, phase, palette);
+  graphics.drawingContext.shadowColor = "transparent";
+  graphics.drawingContext.shadowBlur = 0;
+  graphics.drawingContext.shadowOffsetX = 0;
+  graphics.drawingContext.shadowOffsetY = 0;
 }
 
 function renderSequence() {
@@ -529,7 +553,7 @@ function restoreDraft() {
     title: draft.title ?? "",
     text: draft.text ?? "",
     pattern: draft.pattern ?? "wave",
-    palette: draft.palette ?? "phosphor",
+    palette: "paper",
     visualSeed: draft.visualSeed ?? 1,
     mlVector: draft.mlVector ?? null,
     mlStatus: draft.mlStatus ?? (draft.mlVector ? "MINILM" : "LEXICAL"),
@@ -540,7 +564,6 @@ function refreshAll() {
   elements.titleInput.value = state.title;
   elements.thoughtInput.value = state.text;
   elements.patternSelect.value = state.pattern;
-  elements.paletteSelect.value = state.palette;
   elements.thoughtNumber.textContent = pad(activeNumber());
   elements.binaryNumber.textContent = toBinary(activeNumber());
   elements.modelButton.textContent = state.mlVector ? "RE-RUN LOCAL MODEL" : "RUN LOCAL MODEL";
@@ -584,7 +607,7 @@ function newThought() {
     title: "",
     text: "",
     pattern: "wave",
-    palette: "phosphor",
+    palette: "paper",
     visualSeed: crypto.getRandomValues(new Uint32Array(1))[0],
     mlVector: null,
     mlStatus: "LEXICAL",
@@ -603,7 +626,7 @@ function loadEntry(id) {
     title: entry.title || "",
     text: entry.text,
     pattern: entry.pattern || "wave",
-    palette: entry.palette || "phosphor",
+    palette: "paper",
     visualSeed: entry.visualSeed,
     mlVector: entry.mlVector || null,
     mlStatus: entry.mlStatus || (entry.mlVector ? "MINILM" : "LEXICAL"),
@@ -840,11 +863,6 @@ elements.patternSelect.addEventListener("change", (event) => {
   refreshSlides();
   queueDraftSave();
 });
-elements.paletteSelect.addEventListener("change", (event) => {
-  state.palette = event.target.value;
-  refreshSlides();
-  queueDraftSave();
-});
 elements.modelButton.addEventListener("click", runLocalModel);
 elements.saveButton.addEventListener("click", saveThought);
 elements.randomizeButton.addEventListener("click", randomizePattern);
@@ -884,6 +902,7 @@ new p5((sketch) => {
     sketch.frameRate(12);
     state.p5 = sketch;
     refreshSlides();
+    printFontReady.then(refreshSlides);
   };
   sketch.draw = () => {
     if (!elements.app.hidden && state.slides.length) drawSlide(state.slideIndex, sketch, sketch.millis() / 1000);
