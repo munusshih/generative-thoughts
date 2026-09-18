@@ -13,13 +13,10 @@
     <title>Generative Thoughts</title>
   </head>
   <body>
-    <div class="grain" aria-hidden="true"></div>
-
     <section class="lock-screen" id="lockScreen" aria-labelledby="lockTitle">
       <div class="lock-card">
-        <div class="lock-mark" aria-hidden="true">GT</div>
-        <p class="eyebrow">Private on this device</p>
-        <h1 id="lockTitle">Generative Thoughts</h1>
+        <p class="eyebrow">generative_thoughts / local_index</p>
+        <h1 id="lockTitle">access</h1>
         <p class="lock-copy" id="lockCopy">
           Create a passcode for this browser. Your writing stays here unless you export it.
         </p>
@@ -49,8 +46,8 @@
     <div class="app" id="app" hidden>
       <header class="topbar">
         <a class="brand" href="#studio" aria-label="Generative Thoughts home">
-          <span class="brand-mark" aria-hidden="true">GT</span>
-          <span>Generative Thoughts</span>
+          <span aria-hidden="true">[gt]</span>
+          <span>generative_thoughts</span>
         </a>
         <div class="topbar-actions">
           <span class="saved-state" id="savedState">Saved locally</span>
@@ -64,8 +61,8 @@
         <section class="composer" aria-labelledby="composerTitle">
           <div class="section-heading">
             <div>
-              <p class="eyebrow">Writing</p>
-              <h1 id="composerTitle">Thought <span id="thoughtNumber">001</span></h1>
+              <p class="eyebrow">entry</p>
+              <h1 id="composerTitle">thought_<span id="thoughtNumber">001</span></h1>
             </div>
             <button class="button button--quiet" id="newButton" type="button">New</button>
           </div>
@@ -121,8 +118,8 @@
         <section class="preview-panel" aria-labelledby="previewTitle">
           <div class="preview-heading">
             <div>
-              <p class="eyebrow">Instagram carousel · 4:5</p>
-              <h2 id="previewTitle">Preview</h2>
+              <p class="eyebrow">output / instagram_carousel / 4:5</p>
+              <h2 id="previewTitle">preview</h2>
             </div>
             <span class="slide-count" id="slideCount">01 / 01</span>
           </div>
