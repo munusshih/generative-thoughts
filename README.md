@@ -2,6 +2,8 @@
 
 A local-first p5.js publishing instrument for turning intact writing into numbered ASCII/terminal Instagram carousels.
 
+Production app: [generative-thoughts.vercel.app](https://generative-thoughts.vercel.app)
+
 ## What works now
 
 - Creates a passcode hash in this browser using Web Crypto.

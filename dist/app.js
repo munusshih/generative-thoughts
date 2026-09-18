@@ -16,7 +16,7 @@ const PALETTES = {
 
 const state = {
   settings: loadJSON(STORAGE.settings, null),
-  entries: loadJSON(STORAGE.entries, []),
+  entries: loadJSON(STORAGE.entries, []).map(migrateEntry),
   currentId: null,
   title: "",
   text: "",
@@ -54,6 +54,19 @@ function loadJSON(key, fallback) {
   } catch {
     return fallback;
   }
+}
+
+function migrateEntry(entry) {
+  const patternMap = { orbit: "wave", weave: "attractor", signal: "cellular" };
+  const paletteMap = { ink: "mono", blue: "phosphor", acid: "amber" };
+  return {
+    ...entry,
+    title: entry.title || `Untitled ${pad(entry.index || 0)}`,
+    pattern: patternMap[entry.pattern] || entry.pattern || "wave",
+    palette: paletteMap[entry.palette] || entry.palette || "phosphor",
+    mlVector: entry.mlVector || null,
+    mlStatus: entry.mlStatus || (entry.mlVector ? "MINILM" : "LEXICAL"),
+  };
 }
 
 function saveJSON(key, value) {
