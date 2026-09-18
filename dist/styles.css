@@ -95,7 +95,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .sequence button span { display: block; margin-top: 0.15rem; color: inherit; opacity: 0.6; }
 .slide-controls { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0.6rem; width: min(100%, 620px); margin-top: 0.6rem; }
 .slide-controls > span { overflow: hidden; color: var(--dim); font-size: 0.65rem; text-align: center; white-space: nowrap; text-overflow: ellipsis; }
-.export-actions { display: grid; grid-template-columns: 1fr 1fr 1.25fr; gap: 0.55rem; width: min(100%, 620px); margin-top: 0.6rem; }
+.export-actions { display: grid; grid-template-columns: 1fr 1.2fr 1fr 1.3fr; gap: 0.55rem; width: min(100%, 620px); margin-top: 0.6rem; }
 .export-note { width: min(100%, 620px); margin: 0.6rem 0 0; color: var(--dim); font-size: 0.68rem; line-height: 1.4; }
 
 footer { display: flex; justify-content: space-between; gap: 1rem; padding: 0.7rem 0.8rem; border-top: 1px solid var(--line); color: var(--dim); font-size: 0.7rem; }

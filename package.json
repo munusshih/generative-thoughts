@@ -14,6 +14,7 @@
     "@ibm/plex-mono": "^2.5.0",
     "@vercel/blob": "^2.8.0",
     "jszip": "3.10.2",
+    "mediabunny": "^1.58.0",
     "p5": "2.3.3"
   },
   "devDependencies": {

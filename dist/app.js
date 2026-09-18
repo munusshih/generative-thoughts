@@ -1,5 +1,6 @@
 import p5 from "p5";
 import JSZip from "jszip";
+import { BufferTarget, CanvasSource, Mp4OutputFormat, Output, Quality } from "mediabunny";
 import plexMonoUrl from "@ibm/plex-mono/fonts/split/woff2/IBMPlexMono-Regular-Latin1.woff2?url";
 
 const PRINT_FONT = "IBM Plex Mono";
@@ -25,7 +26,7 @@ const state = {
   currentId: null,
   title: "",
   text: "",
-  pattern: "wave",
+  pattern: "orbit",
   palette: "paper",
   visualSeed: 1,
   mlVector: null,
@@ -46,7 +47,7 @@ const elements = Object.fromEntries(
     "titleInput", "thoughtInput", "thoughtNumber", "binaryNumber", "characterCount", "wordCount", "patternSelect",
     "signalReadout", "modelButton", "saveButton", "randomizeButton", "newButton", "savedState",
     "archiveCount", "archiveList", "previewCanvas", "canvasPlaceholder", "slideType", "slideCount", "sequence",
-    "sequenceStatus", "previousSlide", "nextSlide", "downloadCurrent", "downloadAll", "publishButton", "exportNote",
+    "sequenceStatus", "previousSlide", "nextSlide", "downloadCurrent", "downloadVideo", "downloadAll", "publishButton", "exportNote",
     "resetPasscode", "instagramSettings", "instagramDialog", "instagramAccount", "instagramBackend", "apiBaseInput",
     "captionInput", "saveInstagramSettings", "confirmPublish", "instagramMessage", "toast",
   ].map((id) => [id, document.querySelector(`#${id}`)])
@@ -62,11 +63,17 @@ function loadJSON(key, fallback) {
 }
 
 function migrateEntry(entry) {
-  const patternMap = { orbit: "wave", weave: "attractor", signal: "cellular" };
+  const patternMap = {
+    wave: "orbit",
+    attractor: "vector",
+    cellular: "halftone",
+    weave: "vector",
+    signal: "halftone",
+  };
   return {
     ...entry,
     title: entry.title || `Untitled ${pad(entry.index || 0)}`,
-    pattern: patternMap[entry.pattern] || entry.pattern || "wave",
+    pattern: patternMap[entry.pattern] || entry.pattern || "orbit",
     palette: "paper",
     mlVector: entry.mlVector || null,
     mlStatus: entry.mlStatus || (entry.mlVector ? "MINILM" : "LEXICAL"),
@@ -240,68 +247,194 @@ function currentFeatures() {
   return analyzeText(`${state.title}\n${state.text}`);
 }
 
-function fieldCharacter(column, row, phase, features, randomSeed) {
-  const charset = " .,:;-=+*#%@";
-  const sem = features.semantic;
-  let value;
-  if (state.pattern === "attractor") {
-    const x = (column - 22) / 10;
-    const y = (row - 28) / 12;
-    const radius = Math.sqrt(x * x + y * y);
-    const angle = Math.atan2(y, x);
-    value = Math.sin(radius * (4.2 + features.averageWord * 0.13) - phase * 1.4)
-      + Math.cos(angle * (3 + Math.round(features.cadence * 5)) + phase)
-      + Math.sin((x * y + sem[0] * 4) * 1.7);
-  } else if (state.pattern === "cellular") {
-    const generation = Math.floor(phase * (2 + features.cadence * 4));
-    const cell = stringSeed(`${randomSeed}:${column}:${row}:${generation >> 1}`);
-    const neighbor = stringSeed(`${randomSeed}:${column - 1}:${row + generation}:${features.punctuation}`);
-    value = ((cell ^ neighbor) % 1000) / 180 - 2.7 + Math.sin(row * 0.2 + phase);
-  } else {
-    const xFrequency = 0.13 + features.averageWord * 0.006 + Math.abs(sem[0]) * 0.08;
-    const yFrequency = 0.08 + features.cadence * 0.22 + Math.abs(sem[1]) * 0.07;
-    value = Math.sin(column * xFrequency + phase * (0.7 + features.lexicalDensity))
-      + Math.cos(row * yFrequency - phase * (0.45 + features.cadence))
-      + Math.sin((column + row) * (0.045 + Math.abs(sem[2]) * 0.04) + sem[3] * 7);
-  }
-  const normalized = Math.max(0, Math.min(charset.length - 1, Math.floor(((value + 3) / 6) * charset.length)));
-  return charset[normalized];
+function fieldSeed() {
+  return stringSeed(`${state.title}|${state.text}|${state.visualSeed}|${state.mlVector?.slice(0, 8).join(":") || "lex"}`);
 }
 
-function drawAsciiField(graphics, phase, opacity = 1) {
+function drawRegistrationMark(graphics, x, y, radius, opacity) {
+  const ink = PALETTES.paper.foreground;
+  graphics.push();
+  graphics.noFill();
+  graphics.stroke(withAlpha(ink, opacity));
+  graphics.strokeWeight(1.35);
+  graphics.circle(x, y, radius * 2);
+  graphics.line(x - radius - 9, y, x + radius + 9, y);
+  graphics.line(x, y - radius - 9, x, y + radius + 9);
+  graphics.pop();
+}
+
+function drawOrbitField(graphics, phase, opacity, annotations) {
   const palette = PALETTES[state.palette];
   const features = currentFeatures();
-  const seed = stringSeed(`${state.title}|${state.text}|${state.visualSeed}|${state.mlVector?.slice(0, 8).join(":") || "lex"}`);
-  const columns = 45;
-  const rows = 57;
-  const cellWidth = 1080 / columns;
-  const cellHeight = 1350 / rows;
+  const seed = fieldSeed();
+  const sem = features.semantic;
+  const cx = 540 + sem[0] * 92;
+  const cy = 572 + sem[1] * 108;
+  const orbitCount = 5 + Math.min(3, Math.floor(features.cadence * 7));
   graphics.push();
-  graphics.textFont(PRINT_FONT);
-  graphics.textSize(22);
-  graphics.textStyle(graphics.NORMAL);
-  graphics.textAlign(graphics.CENTER, graphics.CENTER);
+  graphics.noFill();
+  graphics.stroke(withAlpha(palette.foreground, opacity * 0.78));
+  graphics.strokeWeight(1.55);
+  for (let index = 0; index < orbitCount; index += 1) {
+    const mark = stringSeed(`${seed}:orbit:${index}`);
+    const width = 350 + index * 94 + (mark % 55);
+    const height = 120 + ((index * 137 + mark) % 510);
+    const angle = ((mark % 360) * Math.PI) / 180 + phase * (0.028 + index * 0.007) * (index % 2 ? 1 : -1);
+    graphics.push();
+    graphics.translate(cx, cy);
+    graphics.rotate(angle);
+    graphics.drawingContext.setLineDash(index % 3 === 0 ? [10, 13] : []);
+    graphics.ellipse(0, 0, width, height);
+    graphics.drawingContext.setLineDash([]);
+    const nodeAngle = phase * (0.35 + index * 0.04) + (mark % 628) / 100;
+    const nx = Math.cos(nodeAngle) * width * 0.5;
+    const ny = Math.sin(nodeAngle) * height * 0.5;
+    graphics.fill(withAlpha(palette.background, opacity));
+    graphics.circle(nx, ny, 13 + (mark % 13));
+    graphics.noFill();
+    graphics.pop();
+  }
+  graphics.drawingContext.setLineDash([5, 11]);
+  graphics.circle(cx, cy, 840);
+  graphics.drawingContext.setLineDash([]);
+  drawRegistrationMark(graphics, cx, cy, 15, opacity);
+
+  const chars = ". : + x o".split(" ");
   graphics.noStroke();
-  graphics.fill(withAlpha(palette.foreground, opacity * 0.84));
+  graphics.fill(withAlpha(palette.foreground, opacity * 0.72));
+  graphics.textFont(PRINT_FONT);
+  graphics.textSize(17);
+  graphics.textAlign(graphics.CENTER, graphics.CENTER);
+  for (let index = 0; index < 120; index += 1) {
+    const mark = stringSeed(`${seed}:dust:${index}`);
+    const theta = index * 2.399 + phase * 0.025;
+    const radius = 55 + (mark % 430);
+    const x = cx + Math.cos(theta) * radius;
+    const y = cy + Math.sin(theta) * radius * 0.76;
+    if (mark % 7 !== 0) graphics.text(chars[mark % chars.length], x, y);
+  }
+  if (annotations) {
+    graphics.fill(withAlpha(palette.foreground, opacity * 0.86));
+    graphics.textSize(18);
+    graphics.textAlign(graphics.LEFT, graphics.BASELINE);
+    graphics.text("ORBIT_OF_LANGUAGE", 90, 356);
+    graphics.text("PRESENT_TENSE", 765, 423);
+    graphics.text("MEMORY_PLANE", 116, 690);
+    graphics.text("TEXT / FIELD", 768, 760);
+    graphics.textAlign(graphics.CENTER, graphics.BASELINE);
+    graphics.text("FUTURE", cx, 145);
+    graphics.text("PAST", cx, 1055);
+  }
+  graphics.pop();
+}
+
+function drawArrow(graphics, x, y, angle, length, opacity) {
+  const palette = PALETTES[state.palette];
+  const x2 = x + Math.cos(angle) * length;
+  const y2 = y + Math.sin(angle) * length;
+  graphics.stroke(withAlpha(palette.foreground, opacity));
+  graphics.strokeWeight(1.55);
+  graphics.line(x, y, x2, y2);
+  const head = 6;
+  graphics.line(x2, y2, x2 - Math.cos(angle - 0.52) * head, y2 - Math.sin(angle - 0.52) * head);
+  graphics.line(x2, y2, x2 - Math.cos(angle + 0.52) * head, y2 - Math.sin(angle + 0.52) * head);
+}
+
+function drawVectorField(graphics, phase, opacity, annotations) {
+  const palette = PALETTES[state.palette];
+  const features = currentFeatures();
+  const sem = features.semantic;
+  const seed = fieldSeed();
+  const seedAngle = (seed % 628) / 100;
+  const centerX = 540 + sem[2] * 130 + ((seed >>> 7) % 71) - 35;
+  const centerY = 595 + sem[3] * 130 + ((seed >>> 15) % 71) - 35;
+  graphics.push();
+  for (let row = 0; row < 15; row += 1) {
+    for (let column = 0; column < 12; column += 1) {
+      const x = 92 + column * 82;
+      const y = 145 + row * 66;
+      const dx = (x - centerX) / 240;
+      const dy = (y - centerY) / 240;
+      const angle = Math.atan2(dy + Math.sin(dx * 2.2 + phase) * 0.7, dx - Math.cos(dy * 2.4 - phase * 0.7) * 0.7)
+        + features.cadence * Math.PI + seedAngle * 0.12;
+      drawArrow(graphics, x, y, angle, 18 + features.averageWord * 1.6, opacity * 0.7);
+    }
+  }
+  graphics.stroke(withAlpha(palette.foreground, opacity * 0.82));
+  graphics.strokeWeight(1.8);
+  graphics.line(70, centerY, 1010, centerY);
+  graphics.line(centerX, 130, centerX, 1090);
+  drawRegistrationMark(graphics, centerX, centerY, 14, opacity);
+  graphics.noFill();
+  graphics.drawingContext.setLineDash([8, 12]);
+  for (let ring = 1; ring <= 4; ring += 1) {
+    graphics.ellipse(centerX, centerY, ring * 172 + Math.sin(phase + ring) * 18, ring * 106);
+  }
+  graphics.drawingContext.setLineDash([]);
+  if (annotations) {
+    graphics.noStroke();
+    graphics.fill(withAlpha(palette.foreground, opacity));
+    graphics.textFont(PRINT_FONT);
+    graphics.textSize(18);
+    graphics.textAlign(graphics.CENTER, graphics.BASELINE);
+    graphics.text("FUTURE", centerX, 120);
+    graphics.text("PAST", centerX, 1125);
+    graphics.textAlign(graphics.LEFT, graphics.BASELINE);
+    graphics.text("ELSEWHERE", 70, centerY - 18);
+    graphics.textAlign(graphics.RIGHT, graphics.BASELINE);
+    graphics.text("HERE_NOW", 1010, centerY - 18);
+  }
+  graphics.pop();
+}
+
+function drawHalftoneField(graphics, phase, opacity, annotations) {
+  const palette = PALETTES[state.palette];
+  const features = currentFeatures();
+  const seed = fieldSeed();
+  const columns = 42;
+  const rows = 48;
+  const cell = 24;
+  const startX = 42;
+  const startY = 116;
+  graphics.push();
+  graphics.noStroke();
   for (let row = 0; row < rows; row += 1) {
     for (let column = 0; column < columns; column += 1) {
-      const character = fieldCharacter(column, row, phase, features, seed);
-      const mark = stringSeed(`${seed}:${column}:${row}`);
-      if (character !== " " && mark % 19 !== 0) {
-        const jitterX = (((mark >>> 8) % 7) - 3) * 0.22;
-        const jitterY = (((mark >>> 13) % 7) - 3) * 0.18;
-        const x = column * cellWidth + cellWidth / 2 + jitterX;
-        const y = row * cellHeight + cellHeight / 2 + jitterY;
-        graphics.text(character, x, y);
-        if (mark % 31 === 0) {
-          graphics.fill(withAlpha(palette.foreground, opacity * 0.11));
-          graphics.text(character, x + 0.9, y + 0.35);
-          graphics.fill(withAlpha(palette.foreground, opacity * 0.84));
-        }
+      const x = (column - columns / 2) / 6.4;
+      const y = (row - rows / 2) / 7.2;
+      const distance = Math.sqrt(x * x + y * y);
+      const ripple = Math.sin(distance * (3.2 + features.lexicalDensity) - phase * 1.2)
+        + Math.cos(x * 1.35 - y * 0.8 + features.semantic[0] * 4)
+        + Math.sin((x + y) * 0.55 + phase * 0.45);
+      const mark = stringSeed(`${seed}:pixel:${column}:${row}`);
+      const size = Math.max(0, Math.min(16, (ripple + 2.2) * 3.2 + (mark % 5) - 2));
+      if (size > 1.6 && mark % 23 !== 0) {
+        graphics.fill(withAlpha(palette.foreground, opacity * (0.5 + size / 34)));
+        if ((mark + row) % 5 === 0) graphics.rect(startX + column * cell, startY + row * cell, size, size);
+        else graphics.circle(startX + column * cell, startY + row * cell, size);
       }
     }
   }
+  if (annotations) {
+    graphics.noFill();
+    graphics.stroke(withAlpha(palette.foreground, opacity * 0.75));
+    graphics.drawingContext.setLineDash([4, 9]);
+    graphics.rect(72, 146, 936, 930);
+    graphics.drawingContext.setLineDash([]);
+    graphics.noStroke();
+    graphics.fill(withAlpha(palette.foreground, opacity));
+    graphics.textFont(PRINT_FONT);
+    graphics.textSize(18);
+    graphics.textAlign(graphics.LEFT, graphics.BASELINE);
+    graphics.text("LOW_RESOLUTION / HIGH_MEMORY", 72, 1122);
+  }
   graphics.pop();
+}
+
+function drawGenerativeField(graphics, phase, opacity = 1, annotations = false) {
+  if (state.pattern === "vector") drawVectorField(graphics, phase, opacity, annotations);
+  else if (state.pattern === "halftone") drawHalftoneField(graphics, phase, opacity, annotations);
+  else drawOrbitField(graphics, phase, opacity, annotations);
 }
 
 function withAlpha(hex, alpha) {
@@ -373,20 +506,20 @@ function binarySignature() {
 }
 
 function drawCover(graphics, phase, palette) {
-  drawAsciiField(graphics, phase, 0.95);
+  drawGenerativeField(graphics, phase, 0.95, true);
   graphics.noStroke();
-  graphics.fill(withAlpha(palette.background, 0.84));
-  graphics.rect(54, 760, 972, 500);
+  graphics.fill(withAlpha(palette.background, 0.9));
+  graphics.rect(54, 770, 972, 490);
   drawRules(graphics, palette);
   drawIndexHeader(graphics, palette, `GENERATIVE_THOUGHTS / INDEX_${pad(activeNumber())}`, `BINARY_${toBinary(activeNumber())}`);
   graphics.fill(palette.bright);
   graphics.textFont(PRINT_FONT);
   graphics.textAlign(graphics.LEFT, graphics.TOP);
   graphics.textStyle(graphics.NORMAL);
-  graphics.textSize(92);
-  graphics.text(toBinary(activeNumber()), 74, 798, 900, 160);
-  graphics.textSize(48);
-  graphics.text((state.title || "UNTITLED").toUpperCase(), 74, 990, 880, 150);
+  graphics.textSize(104);
+  graphics.text(toBinary(activeNumber()), 74, 804, 900, 160);
+  graphics.textSize(46);
+  graphics.text((state.title || "UNTITLED").toUpperCase(), 74, 1000, 880, 150);
   graphics.fill(palette.foreground);
   graphics.textSize(22);
   graphics.text(`TEXT_SEED_${stringSeed(state.text).toString(16).toUpperCase().padStart(8, "0")}`, 74, 1192);
@@ -394,7 +527,7 @@ function drawCover(graphics, phase, palette) {
 }
 
 function drawTextSlide(graphics, slide, index, phase, palette) {
-  drawAsciiField(graphics, phase * 0.15, 0.12);
+  drawGenerativeField(graphics, phase * 0.15, 0.1, false);
   graphics.noStroke();
   graphics.fill(withAlpha(palette.background, 0.93));
   graphics.rect(42, 40, 996, 1270);
@@ -420,7 +553,7 @@ function drawTextSlide(graphics, slide, index, phase, palette) {
 }
 
 function drawPatternSlide(graphics, phase, palette) {
-  drawAsciiField(graphics, phase * 1.3, 1);
+  drawGenerativeField(graphics, phase * 1.3, 1, true);
   drawRules(graphics, palette);
   drawIndexHeader(graphics, palette, `INDEX_${pad(activeNumber())} / INTERRUPTION`, `SEED_${state.visualSeed.toString(16).slice(-6).toUpperCase()}`);
   graphics.fill(withAlpha(palette.background, 0.8));
@@ -434,7 +567,7 @@ function drawPatternSlide(graphics, phase, palette) {
 }
 
 function drawSignalSlide(graphics, phase, palette) {
-  drawAsciiField(graphics, phase * 0.55, 0.28);
+  drawGenerativeField(graphics, phase * 0.55, 0.24, false);
   graphics.fill(withAlpha(palette.background, 0.9));
   graphics.noStroke();
   graphics.rect(46, 44, 988, 1260);
@@ -552,7 +685,7 @@ function restoreDraft() {
     currentId: draft.id ?? null,
     title: draft.title ?? "",
     text: draft.text ?? "",
-    pattern: draft.pattern ?? "wave",
+    pattern: migrateEntry({ pattern: draft.pattern }).pattern,
     palette: "paper",
     visualSeed: draft.visualSeed ?? 1,
     mlVector: draft.mlVector ?? null,
@@ -606,7 +739,7 @@ function newThought() {
     currentId: null,
     title: "",
     text: "",
-    pattern: "wave",
+    pattern: "orbit",
     palette: "paper",
     visualSeed: crypto.getRandomValues(new Uint32Array(1))[0],
     mlVector: null,
@@ -625,7 +758,7 @@ function loadEntry(id) {
     currentId: entry.id,
     title: entry.title || "",
     text: entry.text,
-    pattern: entry.pattern || "wave",
+    pattern: entry.pattern || "orbit",
     palette: "paper",
     visualSeed: entry.visualSeed,
     mlVector: entry.mlVector || null,
@@ -714,9 +847,46 @@ function exportFilename(index) {
   return `generative-thought-${pad(activeNumber())}-${pad(index + 1, 2)}-${state.slides[index].type}.jpg`;
 }
 
+function coverVideoFilename() {
+  return `generative-thought-${pad(activeNumber())}-01-cover.mp4`;
+}
+
 async function renderExportSlide(index, graphics) {
   drawSlide(index, graphics, 0);
   return canvasToBlob(graphics.canvas, 0.9);
+}
+
+async function renderCoverVideo(onProgress = () => {}) {
+  if (!("VideoEncoder" in window)) throw new Error("MP4_ENCODER_UNAVAILABLE_IN_THIS_BROWSER");
+  await printFontReady;
+  const graphics = state.p5.createGraphics(1080, 1350);
+  graphics.pixelDensity(1);
+  const target = new BufferTarget();
+  const output = new Output({ format: new Mp4OutputFormat(), target });
+  const source = new CanvasSource(graphics.canvas, {
+    codec: "avc",
+    quality: new Quality({ bitrate: 1_600_000 }),
+    keyFrameInterval: 2,
+    latencyMode: "quality",
+  });
+  const framesPerSecond = 18;
+  const duration = 4;
+  const frameCount = framesPerSecond * duration;
+  output.addVideoTrack(source, { frameRate: framesPerSecond });
+  try {
+    await output.start();
+    for (let frame = 0; frame < frameCount; frame += 1) {
+      const timestamp = frame / framesPerSecond;
+      drawSlide(0, graphics, timestamp);
+      await source.add(timestamp, 1 / framesPerSecond, { keyFrame: frame % (framesPerSecond * 2) === 0 });
+      if (frame % 6 === 0) onProgress((frame + 1) / frameCount);
+    }
+    source.close();
+    await output.finalize();
+    return new Blob([target.buffer], { type: "video/mp4" });
+  } finally {
+    graphics.remove();
+  }
 }
 
 async function downloadCurrentSlide() {
@@ -728,19 +898,46 @@ async function downloadCurrentSlide() {
   downloadBlob(blob, exportFilename(state.slideIndex));
 }
 
+async function downloadCoverVideo() {
+  if (!state.text.trim()) return showToast("ERR / TEXT_REQUIRED");
+  elements.downloadVideo.disabled = true;
+  elements.downloadVideo.textContent = "ENCODING 00%";
+  try {
+    const blob = await renderCoverVideo((progress) => {
+      elements.downloadVideo.textContent = `ENCODING ${String(Math.round(progress * 100)).padStart(2, "0")}%`;
+    });
+    downloadBlob(blob, coverVideoFilename());
+    showToast("COVER_VIDEO / SAVED");
+  } catch (error) {
+    showToast(`ERR / ${error.message}`);
+  } finally {
+    elements.downloadVideo.disabled = false;
+    elements.downloadVideo.textContent = "SAVE COVER VIDEO";
+  }
+}
+
 async function downloadAllSlides() {
   if (!state.text.trim()) return showToast("ERR / TEXT_REQUIRED");
   elements.downloadAll.disabled = true;
   const graphics = state.p5.createGraphics(1080, 1350);
   graphics.pixelDensity(1);
-  const zip = new JSZip();
-  for (let index = 0; index < state.slides.length; index += 1) {
-    zip.file(exportFilename(index), await renderExportSlide(index, graphics));
+  try {
+    const zip = new JSZip();
+    elements.downloadAll.textContent = "ENCODING COVER";
+    zip.file(coverVideoFilename(), await renderCoverVideo());
+    for (let index = 1; index < state.slides.length; index += 1) {
+      elements.downloadAll.textContent = `RENDER ${index + 1}/${state.slides.length}`;
+      zip.file(exportFilename(index), await renderExportSlide(index, graphics));
+    }
+    downloadBlob(await zip.generateAsync({ type: "blob" }), `generative-thought-${pad(activeNumber())}.zip`);
+    showToast(`MIXED_CAROUSEL_${pad(state.slides.length, 2)} / SAVED`);
+  } catch (error) {
+    showToast(`ERR / ${error.message}`);
+  } finally {
+    graphics.remove();
+    elements.downloadAll.disabled = false;
+    elements.downloadAll.textContent = "SAVE CAROUSEL";
   }
-  graphics.remove();
-  downloadBlob(await zip.generateAsync({ type: "blob" }), `generative-thought-${pad(activeNumber())}.zip`);
-  elements.downloadAll.disabled = false;
-  showToast(`CAROUSEL_${pad(state.slides.length, 2)} / SAVED`);
 }
 
 function blobToDataURL(blob) {
@@ -803,10 +1000,11 @@ async function publishToInstagram() {
   try {
     const graphics = state.p5.createGraphics(1080, 1350);
     graphics.pixelDensity(1);
-    const slides = [];
-    for (let index = 0; index < state.slides.length; index += 1) {
+    elements.confirmPublish.textContent = "ENCODE COVER VIDEO";
+    const slides = [{ type: "video", dataUrl: await blobToDataURL(await renderCoverVideo()) }];
+    for (let index = 1; index < state.slides.length; index += 1) {
       elements.confirmPublish.textContent = `RENDER ${index + 1}/${state.slides.length}`;
-      slides.push(await blobToDataURL(await renderExportSlide(index, graphics)));
+      slides.push({ type: "image", dataUrl: await blobToDataURL(await renderExportSlide(index, graphics)) });
     }
     graphics.remove();
     elements.confirmPublish.textContent = "PUBLISHING…";
@@ -886,6 +1084,7 @@ elements.nextSlide.addEventListener("click", () => {
   renderSequence();
 });
 elements.downloadCurrent.addEventListener("click", downloadCurrentSlide);
+elements.downloadVideo.addEventListener("click", downloadCoverVideo);
 elements.downloadAll.addEventListener("click", downloadAllSlides);
 elements.publishButton.addEventListener("click", openInstagramDialog);
 elements.instagramSettings.addEventListener("click", openInstagramDialog);

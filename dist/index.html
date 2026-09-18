@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#e8dfcf" />
-    <meta name="description" content="Generative Thoughts — indexed writing translated into ASCII fields." />
+    <meta name="description" content="Generative Thoughts — indexed writing translated into moving diagrams and low-resolution fields." />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="./styles.css" />
     <title>Generative Thoughts</title>
@@ -63,9 +63,9 @@
             <label class="field" for="patternSelect">
               <span>FIELD_EQUATION</span>
               <select id="patternSelect">
-                <option value="wave">WAVE_INTERFERENCE</option>
-                <option value="attractor">STRANGE_ATTRACTOR</option>
-                <option value="cellular">CELLULAR_SIGNAL</option>
+                <option value="orbit">ORBITAL_INDEX</option>
+                <option value="vector">DIRECTIONAL_FIELD</option>
+                <option value="halftone">HALFTONE_MEMORY</option>
               </select>
             </label>
           </div>
@@ -93,7 +93,7 @@
         <section class="preview-panel" aria-labelledby="previewTitle">
           <div class="preview-heading">
             <div>
-              <p class="eyebrow">CAROUSEL / 1080×1350 / JPEG</p>
+              <p class="eyebrow">CAROUSEL / 1080×1350 / MP4 + JPEG</p>
               <h2 id="previewTitle">OUTPUT_SEQUENCE</h2>
             </div>
             <div class="preview-index">
@@ -103,7 +103,7 @@
           </div>
 
           <div class="canvas-wrap">
-            <div id="previewCanvas" role="img" aria-label="Generated ASCII post preview"></div>
+            <div id="previewCanvas" role="img" aria-label="Generated diagrammatic post preview"></div>
             <p class="canvas-placeholder" id="canvasPlaceholder">WAITING_FOR_TEXT_</p>
           </div>
 
@@ -117,10 +117,11 @@
 
           <div class="export-actions">
             <button class="command" id="downloadCurrent" type="button">SAVE FRAME</button>
+            <button class="command" id="downloadVideo" type="button">SAVE COVER VIDEO</button>
             <button class="command" id="downloadAll" type="button">SAVE CAROUSEL</button>
             <button class="command command--publish" id="publishButton" type="button">PUBLISH TO INSTAGRAM</button>
           </div>
-          <p class="export-note" id="exportNote">ANIMATION RUNS HERE / EXPORT FREEZES ONE DETERMINISTIC FRAME</p>
+          <p class="export-note" id="exportNote">COVER EXPORTS AS A 4-SECOND MP4 / TEXT PAGES EXPORT AS JPEG</p>
         </section>
       </main>
 
@@ -140,7 +141,7 @@
         <dl class="connection-status">
           <div><dt>ACCOUNT</dt><dd id="instagramAccount">NOT_CONFIGURED</dd></div>
           <div><dt>BACKEND</dt><dd id="instagramBackend">NOT_CONNECTED</dd></div>
-          <div><dt>FORMAT</dt><dd>PROFESSIONAL_CAROUSEL / 2–10 JPEG</dd></div>
+          <div><dt>FORMAT</dt><dd>CREATOR_CAROUSEL / MP4 COVER + 1–9 JPEG</dd></div>
         </dl>
         <label class="field" for="apiBaseInput">
           <span>PUBLISH_SERVER_URL / BLANK FOR SAME ORIGIN</span>

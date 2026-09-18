@@ -1,6 +1,6 @@
 # Generative Thoughts
 
-A local-first p5.js publishing instrument for turning intact writing into numbered ASCII/terminal Instagram carousels.
+A local-first p5.js publishing instrument for turning intact writing into numbered, diagrammatic Instagram carousels.
 
 Production app: [generative-thoughts.vercel.app](https://generative-thoughts.vercel.app)
 
@@ -9,11 +9,12 @@ Production app: [generative-thoughts.vercel.app](https://generative-thoughts.ver
 - Creates a passcode hash in this browser using Web Crypto.
 - Saves drafts, the numbered index, patterns, and palettes in `localStorage`.
 - Preserves the original text exactly while paginating it across 4:5 slides.
-- Builds a sequence: animated ASCII cover, indexed text pages, occasional pattern interruptions, and a local-signal record.
+- Builds a sequence: animated diagram cover, indexed text pages, occasional pattern interruptions, and a local-signal record.
+- Translates the writing into orbital diagrams, directional fields, or low-resolution halftone fields without altering a word.
 - Uses the post title, length, punctuation, cadence, lexical density, and optional local sentence embedding to control the p5 equations.
 - Counts posts in binary on the cover: `0`, `1`, `10`, `11`, …
-- Exports 1080 × 1350 JPEG files and bundles the full carousel as a ZIP.
-- Can publish a 2–10 image carousel directly to an Instagram Professional account through the included secure server bridge.
+- Exports the 1080 × 1350 cover as a four-second MP4 and the remaining pages as JPEG files, bundled together as a ZIP.
+- Can publish a mixed 2–10 item carousel directly to an Instagram Business or Creator account through the included secure server bridge.
 - Uses Vite for a small, conventional build that is easy to extend with existing creative-coding libraries.
 
 ## Run locally
@@ -45,7 +46,7 @@ Instagram tokens must never be stored in browser code. Deploy the repository to 
 - `BLOB_READ_WRITE_TOKEN`
 - `ALLOWED_ORIGIN`
 
-The Instagram account must be a Business or Creator account and the Meta app/token must have `instagram_business_basic` and `instagram_business_content_publish`. The server temporarily hosts each JPEG, creates the carousel containers, publishes the post, then deletes the temporary files.
+The Instagram account must be a Business or Creator account and the Meta app/token must have `instagram_business_basic` and `instagram_business_content_publish`. The server temporarily hosts the MP4 and JPEG files, creates the carousel containers, publishes the post, then deletes the temporary files.
 
 GitHub Pages continues to host the static studio. In `INSTAGRAM_OUTPUT`, set the deployed Vercel URL as the publish server. If the entire app is hosted on Vercel, leave the server URL blank.
 

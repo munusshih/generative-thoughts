@@ -19,27 +19,34 @@ export default async function handler(request, response) {
   }
   if (caption.length > 2200) return response.status(400).json({ error: "CAPTION_TOO_LONG" });
 
-  const uploadedUrls = [];
+  const uploadedMedia = [];
   try {
     for (let slideIndex = 0; slideIndex < slides.length; slideIndex += 1) {
-      const match = /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(slides[slideIndex]);
-      if (!match) throw new Error(`SLIDE_${slideIndex + 1}_IS_NOT_JPEG`);
-      const image = Buffer.from(match[1], "base64");
-      if (image.byteLength > 8_000_000) throw new Error(`SLIDE_${slideIndex + 1}_TOO_LARGE`);
+      const slide = typeof slides[slideIndex] === "string"
+        ? { type: "image", dataUrl: slides[slideIndex] }
+        : slides[slideIndex];
+      const type = slide?.type === "video" ? "video" : "image";
+      const mime = type === "video" ? "video/mp4" : "image/jpeg";
+      const extension = type === "video" ? "mp4" : "jpg";
+      const match = new RegExp(`^data:${mime.replace("/", "\\/")};base64,([A-Za-z0-9+/=]+)$`).exec(slide?.dataUrl || "");
+      if (!match) throw new Error(`SLIDE_${slideIndex + 1}_IS_NOT_${type.toUpperCase()}`);
+      const media = Buffer.from(match[1], "base64");
+      const maximumBytes = type === "video" ? 20_000_000 : 8_000_000;
+      if (media.byteLength > maximumBytes) throw new Error(`SLIDE_${slideIndex + 1}_TOO_LARGE`);
       const blob = await put(
-        `instagram/gt-${String(index).padStart(3, "0")}-${slideIndex + 1}.jpg`,
-        image,
-        { access: "public", addRandomSuffix: true, contentType: "image/jpeg" }
+        `instagram/gt-${String(index).padStart(3, "0")}-${slideIndex + 1}.${extension}`,
+        media,
+        { access: "public", addRandomSuffix: true, contentType: mime }
       );
-      uploadedUrls.push(blob.url);
+      uploadedMedia.push({ type, url: blob.url });
     }
 
     const childIds = [];
-    for (const imageUrl of uploadedUrls) {
-      const child = await graphPost(`/${process.env.INSTAGRAM_USER_ID}/media`, {
-        image_url: imageUrl,
-        is_carousel_item: "true",
-      });
+    for (const media of uploadedMedia) {
+      const values = media.type === "video"
+        ? { media_type: "VIDEO", video_url: media.url, is_carousel_item: "true" }
+        : { image_url: media.url, is_carousel_item: "true" };
+      const child = await graphPost(`/${process.env.INSTAGRAM_USER_ID}/media`, values);
       await waitUntilReady(child.id);
       childIds.push(child.id);
     }
@@ -59,6 +66,7 @@ export default async function handler(request, response) {
     console.error("Instagram publish failed", error);
     return response.status(502).json({ error: safeError(error) });
   } finally {
+    const uploadedUrls = uploadedMedia.map((media) => media.url);
     if (uploadedUrls.length) await del(uploadedUrls).catch((error) => console.error("Temporary blob cleanup failed", error));
   }
 }
