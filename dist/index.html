@@ -25,138 +25,69 @@
     </section>
 
     <div class="app" id="app" hidden>
-      <header class="topbar">
-        <a class="brand" href="#studio">GT://INDEX</a>
-        <div class="topbar-actions">
-          <span id="savedState">LOCAL/SAVED</span>
-          <button class="text-command" id="instagramSettings" type="button">INSTAGRAM/OFFLINE</button>
-          <button class="text-command" id="lockButton" type="button">LOCK</button>
-        </div>
-      </header>
-
       <main class="workspace" id="studio">
-        <section class="composer" aria-labelledby="composerTitle">
-          <div class="index-header">
-            <div>
-              <p class="eyebrow">CURRENT_ENTRY</p>
-              <h1 id="composerTitle">INDEX_<span id="thoughtNumber">001</span></h1>
-            </div>
-            <div class="binary-number" aria-label="Binary post number" id="binaryNumber">0</div>
-          </div>
-
+        <section class="composer" aria-label="Write a generative thought">
+          <div class="entry-number" aria-label="Current binary index">GT/<span id="binaryNumber">0</span></div>
           <label class="field field--title" for="titleInput">
-            <span>TITLE</span>
-            <input id="titleInput" maxlength="90" placeholder="untitled thought" />
+            <span class="sr-only">Title</span>
+            <input id="titleInput" maxlength="90" placeholder="title" />
           </label>
-
-          <label class="field" for="thoughtInput">
-            <span>TEXT / PRESERVED VERBATIM</span>
-            <textarea id="thoughtInput" maxlength="5000" spellcheck="true" placeholder="type here_"></textarea>
+          <label class="field field--story" for="thoughtInput">
+            <span class="sr-only">Story</span>
+            <textarea id="thoughtInput" maxlength="5000" spellcheck="true" placeholder="story"></textarea>
           </label>
-
-          <div class="text-meta">
-            <span id="characterCount">0</span><span>CHARS</span>
-            <span id="wordCount">0</span><span>WORDS</span>
-            <span>[OK] TEXT_INTACT</span>
+          <div class="primary-actions">
+            <button class="command" id="randomizeButton" type="button">RANDOMIZE</button>
+            <button class="command command--publish" id="publishButton" type="button">PUBLISH</button>
           </div>
-
-          <div class="control-grid">
-            <label class="field" for="patternSelect">
-              <span>FIELD_EQUATION</span>
-              <select id="patternSelect">
-                <option value="orbit">ORBITAL_INDEX</option>
-                <option value="vector">DIRECTIONAL_FIELD</option>
-                <option value="halftone">HALFTONE_MEMORY</option>
-              </select>
-            </label>
-          </div>
-
-          <div class="signal-panel">
-            <div>
-              <p>TEXT_SIGNAL</p>
-              <output id="signalReadout">LEN:0000 / PUNC:000 / CAD:000 / SEM:LEXICAL</output>
-            </div>
-            <button class="command" id="modelButton" type="button">RUN LOCAL MODEL</button>
-          </div>
-
-          <div class="composer-actions">
-            <button class="command" id="saveButton" type="button">SAVE INDEX</button>
-            <button class="command" id="randomizeButton" type="button">NEW FIELD SEED</button>
-            <button class="command" id="newButton" type="button">NEW ENTRY</button>
-          </div>
-
-          <details class="archive" id="archiveDetails">
-            <summary><span>ARCHIVE</span><span id="archiveCount">000</span></summary>
-            <div class="archive-list" id="archiveList"></div>
-          </details>
         </section>
 
-        <section class="preview-panel" aria-labelledby="previewTitle">
-          <div class="preview-heading">
-            <div>
-              <p class="eyebrow">CAROUSEL / 1080×1350 / MP4 + JPEG</p>
-              <h2 id="previewTitle">OUTPUT_SEQUENCE</h2>
-            </div>
-            <div class="preview-index">
-              <span id="slideType">COVER</span>
-              <span id="slideCount">01/03</span>
-            </div>
-          </div>
-
+        <section class="preview-panel" aria-label="Generated carousel preview">
           <div class="canvas-wrap">
-            <div id="previewCanvas" role="img" aria-label="Generated diagrammatic post preview"></div>
-            <p class="canvas-placeholder" id="canvasPlaceholder">WAITING_FOR_TEXT_</p>
+            <div id="previewCanvas" role="button" tabindex="0" aria-label="Generated post preview; activate to view the next slide"></div>
+            <p class="canvas-placeholder" id="canvasPlaceholder">TYPE TO BEGIN</p>
           </div>
-
-          <div class="sequence" id="sequence" aria-label="Carousel sequence"></div>
-
-          <div class="slide-controls">
-            <button class="command command--small" id="previousSlide" type="button">PREV</button>
-            <span id="sequenceStatus">COVER → TEXT → LOCAL_SIGNAL</span>
-            <button class="command command--small" id="nextSlide" type="button">NEXT</button>
-          </div>
-
-          <div class="export-actions">
-            <button class="command" id="downloadCurrent" type="button">SAVE FRAME</button>
-            <button class="command" id="downloadVideo" type="button">SAVE COVER VIDEO</button>
-            <button class="command" id="downloadAll" type="button">SAVE CAROUSEL</button>
-            <button class="command command--publish" id="publishButton" type="button">PUBLISH TO INSTAGRAM</button>
-          </div>
-          <p class="export-note" id="exportNote">COVER EXPORTS AS A 4-SECOND MP4 / TEXT PAGES EXPORT AS JPEG</p>
+          <p class="preview-count"><span id="slideCount">01/03</span> · TAP IMAGE FOR NEXT</p>
         </section>
       </main>
 
-      <footer>
-        <span>GENERATIVE_THOUGHTS / LOCAL_FIRST / P5.JS</span>
-        <button id="resetPasscode" type="button">RESET LOCAL INDEX</button>
-      </footer>
+      <div hidden aria-hidden="true">
+        <span id="savedState"></span><button id="instagramSettings"></button><button id="lockButton"></button>
+        <span id="thoughtNumber"></span><span id="characterCount"></span><span id="wordCount"></span>
+        <select id="patternSelect"><option value="orbit"></option><option value="axis"></option><option value="vector"></option><option value="halftone"></option><option value="echo"></option><option value="constellation"></option></select>
+        <output id="signalReadout"></output><button id="modelButton"></button><button id="saveButton"></button><button id="newButton"></button>
+        <span id="archiveCount"></span><div id="archiveList"></div><span id="slideType"></span><div id="sequence"></div><span id="sequenceStatus"></span>
+        <button id="previousSlide"></button><button id="nextSlide"></button><button id="downloadCurrent"></button><button id="downloadVideo"></button><button id="downloadAll"></button>
+        <span id="exportNote"></span><button id="resetPasscode"></button>
+      </div>
     </div>
 
     <dialog id="instagramDialog">
       <form method="dialog" class="dialog-shell">
         <div class="dialog-heading">
-          <h2>INSTAGRAM_OUTPUT</h2>
+          <h2>Publish</h2>
           <button class="text-command" value="cancel">CLOSE</button>
         </div>
-        <p>Direct publishing uses a private server bridge. Tokens never belong in this page or repository.</p>
-        <dl class="connection-status">
-          <div><dt>ACCOUNT</dt><dd id="instagramAccount">NOT_CONFIGURED</dd></div>
-          <div><dt>BACKEND</dt><dd id="instagramBackend">NOT_CONNECTED</dd></div>
-          <div><dt>FORMAT</dt><dd>CREATOR_CAROUSEL / MP4 COVER + 1–9 JPEG</dd></div>
-        </dl>
-        <label class="field" for="apiBaseInput">
-          <span>PUBLISH_SERVER_URL / BLANK FOR SAME ORIGIN</span>
-          <input id="apiBaseInput" type="url" placeholder="https://your-project.vercel.app" />
-        </label>
         <label class="field" for="captionInput">
-          <span>CAPTION</span>
-          <textarea id="captionInput" maxlength="2200" placeholder="optional caption"></textarea>
+          <span class="sr-only">Caption</span>
+          <textarea id="captionInput" maxlength="2200" placeholder="caption"></textarea>
         </label>
         <div class="dialog-actions">
-          <button class="command" id="saveInstagramSettings" type="button">SAVE SERVER</button>
-          <button class="command command--publish" id="confirmPublish" type="button">PUBLISH NOW</button>
+          <button class="command command--publish" id="confirmPublish" type="button">PUBLISH TO INSTAGRAM</button>
         </div>
         <p class="dialog-note" id="instagramMessage">SERVER_NOT_CONFIGURED</p>
+        <details class="connection-details">
+          <summary>connection settings</summary>
+          <dl class="connection-status">
+            <div><dt>ACCOUNT</dt><dd id="instagramAccount">NOT_CONFIGURED</dd></div>
+            <div><dt>BACKEND</dt><dd id="instagramBackend">NOT_CONNECTED</dd></div>
+          </dl>
+          <label class="field" for="apiBaseInput">
+            <span>PUBLISH SERVER URL</span>
+            <input id="apiBaseInput" type="url" placeholder="blank for this site" />
+          </label>
+          <button class="command" id="saveInstagramSettings" type="button">SAVE CONNECTION</button>
+        </details>
       </form>
     </dialog>
 

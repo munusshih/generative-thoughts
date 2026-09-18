@@ -35,6 +35,7 @@ const state = {
   slides: [],
   slideIndex: 0,
   saveTimer: null,
+  modelTimer: null,
   p5: null,
   passphrase: "",
   apiBase: localStorage.getItem(STORAGE.apiBase) || "",
@@ -247,6 +248,30 @@ function currentFeatures() {
   return analyzeText(`${state.title}\n${state.text}`);
 }
 
+function compositionFor(features = currentFeatures()) {
+  const contentSeed = stringSeed(`${state.title}|${state.text}`);
+  const mixedSeed = (contentSeed ^ state.visualSeed) >>> 0;
+  const modes = ["axis", "orbit", "echo", "vector", "halftone", "constellation"];
+  const randomness = ((mixedSeed >>> 7) % 1000) / 999;
+  const contentComplexity = Math.min(1,
+    features.words / 240
+    + features.punctuation / 55
+    + features.lineBreaks / 18
+    + Math.max(0, 0.75 - features.lexicalDensity) * 0.28
+  );
+  const modeIndex = (
+    state.visualSeed
+    + Math.floor(features.words / 8) * 7
+    + features.punctuation * 13
+    + features.lineBreaks * 17
+    + Math.floor(features.averageWord * 11)
+  ) % modes.length;
+  return {
+    mode: modes[modeIndex],
+    complexity: Math.max(0.03, Math.min(1, contentComplexity * 0.62 + randomness * 0.7)),
+  };
+}
+
 function fieldSeed() {
   return stringSeed(`${state.title}|${state.text}|${state.visualSeed}|${state.mlVector?.slice(0, 8).join(":") || "lex"}`);
 }
@@ -270,7 +295,8 @@ function drawOrbitField(graphics, phase, opacity, annotations) {
   const sem = features.semantic;
   const cx = 540 + sem[0] * 92;
   const cy = 572 + sem[1] * 108;
-  const orbitCount = 5 + Math.min(3, Math.floor(features.cadence * 7));
+  const complexity = compositionFor(features).complexity;
+  const orbitCount = 1 + Math.floor(complexity * 9);
   graphics.push();
   graphics.noFill();
   graphics.stroke(withAlpha(palette.foreground, opacity * 0.78));
@@ -305,7 +331,8 @@ function drawOrbitField(graphics, phase, opacity, annotations) {
   graphics.textFont(PRINT_FONT);
   graphics.textSize(17);
   graphics.textAlign(graphics.CENTER, graphics.CENTER);
-  for (let index = 0; index < 120; index += 1) {
+  const dustCount = Math.floor(complexity * 220);
+  for (let index = 0; index < dustCount; index += 1) {
     const mark = stringSeed(`${seed}:dust:${index}`);
     const theta = index * 2.399 + phase * 0.025;
     const radius = 55 + (mark % 430);
@@ -345,14 +372,17 @@ function drawVectorField(graphics, phase, opacity, annotations) {
   const features = currentFeatures();
   const sem = features.semantic;
   const seed = fieldSeed();
+  const complexity = compositionFor(features).complexity;
   const seedAngle = (seed % 628) / 100;
   const centerX = 540 + sem[2] * 130 + ((seed >>> 7) % 71) - 35;
   const centerY = 595 + sem[3] * 130 + ((seed >>> 15) % 71) - 35;
   graphics.push();
-  for (let row = 0; row < 15; row += 1) {
-    for (let column = 0; column < 12; column += 1) {
-      const x = 92 + column * 82;
-      const y = 145 + row * 66;
+  const columns = 4 + Math.floor(complexity * 10);
+  const rows = 5 + Math.floor(complexity * 12);
+  for (let row = 0; row < rows; row += 1) {
+    for (let column = 0; column < columns; column += 1) {
+      const x = 92 + column * (896 / Math.max(1, columns - 1));
+      const y = 160 + row * (880 / Math.max(1, rows - 1));
       const dx = (x - centerX) / 240;
       const dy = (y - centerY) / 240;
       const angle = Math.atan2(dy + Math.sin(dx * 2.2 + phase) * 0.7, dx - Math.cos(dy * 2.4 - phase * 0.7) * 0.7)
@@ -367,7 +397,7 @@ function drawVectorField(graphics, phase, opacity, annotations) {
   drawRegistrationMark(graphics, centerX, centerY, 14, opacity);
   graphics.noFill();
   graphics.drawingContext.setLineDash([8, 12]);
-  for (let ring = 1; ring <= 4; ring += 1) {
+  for (let ring = 1; ring <= 1 + Math.floor(complexity * 5); ring += 1) {
     graphics.ellipse(centerX, centerY, ring * 172 + Math.sin(phase + ring) * 18, ring * 106);
   }
   graphics.drawingContext.setLineDash([]);
@@ -391,9 +421,11 @@ function drawHalftoneField(graphics, phase, opacity, annotations) {
   const palette = PALETTES[state.palette];
   const features = currentFeatures();
   const seed = fieldSeed();
-  const columns = 42;
-  const rows = 48;
-  const cell = 24;
+  const complexity = compositionFor(features).complexity;
+  const columns = 18 + Math.floor(complexity * 30);
+  const rows = 20 + Math.floor(complexity * 36);
+  const cellX = 996 / columns;
+  const cellY = 940 / rows;
   const startX = 42;
   const startY = 116;
   graphics.push();
@@ -407,11 +439,11 @@ function drawHalftoneField(graphics, phase, opacity, annotations) {
         + Math.cos(x * 1.35 - y * 0.8 + features.semantic[0] * 4)
         + Math.sin((x + y) * 0.55 + phase * 0.45);
       const mark = stringSeed(`${seed}:pixel:${column}:${row}`);
-      const size = Math.max(0, Math.min(16, (ripple + 2.2) * 3.2 + (mark % 5) - 2));
-      if (size > 1.6 && mark % 23 !== 0) {
+      const size = Math.max(0, Math.min(16, (ripple + 2.2) * (1.8 + complexity * 2.4) + (mark % 5) - 2));
+      if (size > 4.5 - complexity * 3 && mark % 23 !== 0) {
         graphics.fill(withAlpha(palette.foreground, opacity * (0.5 + size / 34)));
-        if ((mark + row) % 5 === 0) graphics.rect(startX + column * cell, startY + row * cell, size, size);
-        else graphics.circle(startX + column * cell, startY + row * cell, size);
+        if ((mark + row) % 5 === 0) graphics.rect(startX + column * cellX, startY + row * cellY, size, size);
+        else graphics.circle(startX + column * cellX, startY + row * cellY, size);
       }
     }
   }
@@ -431,16 +463,139 @@ function drawHalftoneField(graphics, phase, opacity, annotations) {
   graphics.pop();
 }
 
-function drawGenerativeField(graphics, phase, opacity = 1, annotations = false) {
-  if (state.pattern === "vector") drawVectorField(graphics, phase, opacity, annotations);
-  else if (state.pattern === "halftone") drawHalftoneField(graphics, phase, opacity, annotations);
-  else drawOrbitField(graphics, phase, opacity, annotations);
+function drawAxisField(graphics, phase, annotations) {
+  const palette = PALETTES[state.palette];
+  const features = currentFeatures();
+  const { complexity } = compositionFor(features);
+  const seed = fieldSeed();
+  const cx = 540 + features.semantic[0] * 120;
+  const cy = 580 + features.semantic[1] * 120;
+  const rayCount = 2 + Math.floor(complexity * 14);
+  graphics.push();
+  graphics.stroke(palette.foreground);
+  graphics.strokeWeight(1.65);
+  for (let index = 0; index < rayCount; index += 1) {
+    const mark = stringSeed(`${seed}:axis:${index}`);
+    const angle = (mark % 628) / 100 + phase * (0.012 + index * 0.001);
+    const length = 150 + (mark % 350) + complexity * 220;
+    graphics.drawingContext.setLineDash(index % 3 === 0 ? [9, 12] : []);
+    graphics.line(cx, cy, cx + Math.cos(angle) * length, cy + Math.sin(angle) * length);
+  }
+  graphics.drawingContext.setLineDash([]);
+  drawRegistrationMark(graphics, cx, cy, 13, 1);
+  if (annotations) {
+    graphics.noStroke();
+    graphics.fill(palette.foreground);
+    graphics.textFont(PRINT_FONT);
+    graphics.textSize(18);
+    graphics.textAlign(graphics.CENTER, graphics.BASELINE);
+    graphics.text("FUTURE", cx, 142);
+    graphics.text("PAST", cx, 1070);
+    graphics.textAlign(graphics.LEFT, graphics.BASELINE);
+    graphics.text("HERE", 72, cy - 15);
+    graphics.textAlign(graphics.RIGHT, graphics.BASELINE);
+    graphics.text("ELSEWHERE", 1008, cy - 15);
+  }
+  graphics.pop();
 }
 
-function withAlpha(hex, alpha) {
-  const value = hex.replace("#", "");
-  const bigint = parseInt(value, 16);
-  return `rgba(${(bigint >> 16) & 255}, ${(bigint >> 8) & 255}, ${bigint & 255}, ${alpha})`;
+function drawEchoField(graphics, phase, annotations) {
+  const palette = PALETTES[state.palette];
+  const features = currentFeatures();
+  const { complexity } = compositionFor(features);
+  const seed = fieldSeed();
+  const lineCount = 3 + Math.floor(complexity * 28);
+  graphics.push();
+  graphics.noFill();
+  graphics.stroke(palette.foreground);
+  graphics.strokeWeight(1.3);
+  for (let index = 0; index < lineCount; index += 1) {
+    const mark = stringSeed(`${seed}:echo:${index}`);
+    const x = 90 + index * (900 / Math.max(1, lineCount - 1));
+    graphics.beginShape();
+    for (let step = 0; step <= 60; step += 1) {
+      const y = 145 + step * 15;
+      const envelope = Math.sin((step / 60) * Math.PI);
+      const displacement = Math.sin(step * (0.13 + features.cadence * 0.25) + phase + index * 0.34) * envelope * (16 + (mark % 70));
+      graphics.vertex(x + displacement, y);
+    }
+    graphics.endShape();
+  }
+  if (annotations) {
+    graphics.noStroke();
+    graphics.fill(palette.foreground);
+    graphics.textFont(PRINT_FONT);
+    graphics.textSize(18);
+    graphics.textAlign(graphics.LEFT, graphics.BASELINE);
+    graphics.text("VOICE_01", 72, 1120);
+    graphics.textAlign(graphics.RIGHT, graphics.BASELINE);
+    graphics.text(`ECHO_${lineCount.toString(2)}`, 1008, 1120);
+  }
+  graphics.pop();
+}
+
+function drawConstellationField(graphics, phase, annotations) {
+  const palette = PALETTES[state.palette];
+  const features = currentFeatures();
+  const { complexity } = compositionFor(features);
+  const random = mulberry32(fieldSeed());
+  const nodeCount = 7 + Math.floor(complexity * 55);
+  const nodes = Array.from({ length: nodeCount }, (_, index) => ({
+    x: 90 + random() * 900 + Math.sin(phase * 0.18 + index) * 5,
+    y: 155 + random() * 860 + Math.cos(phase * 0.15 + index) * 5,
+    size: 4 + random() * (6 + complexity * 12),
+  }));
+  graphics.push();
+  graphics.stroke(palette.foreground);
+  graphics.strokeWeight(1.1);
+  const reach = 80 + complexity * 125;
+  nodes.forEach((node, index) => {
+    for (let offset = 1; offset <= 1 + Math.floor(complexity * 3); offset += 1) {
+      const other = nodes[(index + offset) % nodes.length];
+      if (Math.hypot(node.x - other.x, node.y - other.y) < reach) graphics.line(node.x, node.y, other.x, other.y);
+    }
+  });
+  graphics.fill(palette.background);
+  nodes.forEach((node, index) => {
+    graphics.circle(node.x, node.y, node.size);
+    if (complexity > 0.55 && index % 5 === 0) {
+      graphics.noStroke();
+      graphics.fill(palette.foreground);
+      graphics.textFont(PRINT_FONT);
+      graphics.textSize(13);
+      graphics.text(String(index).padStart(2, "0"), node.x + 12, node.y - 8);
+      graphics.stroke(palette.foreground);
+      graphics.fill(palette.background);
+    }
+  });
+  if (annotations) {
+    graphics.noStroke();
+    graphics.fill(palette.foreground);
+    graphics.textFont(PRINT_FONT);
+    graphics.textSize(18);
+    graphics.textAlign(graphics.LEFT, graphics.BASELINE);
+    graphics.text("RELATION_MAP", 72, 1120);
+  }
+  graphics.pop();
+}
+
+function drawGenerativeField(graphics, phase, opacity = 1, annotations = false) {
+  const context = graphics.drawingContext;
+  context.save();
+  context.beginPath();
+  context.rect(54, 128, 972, 956);
+  context.clip();
+  if (state.pattern === "axis") drawAxisField(graphics, phase, annotations);
+  else if (state.pattern === "vector") drawVectorField(graphics, phase, opacity, annotations);
+  else if (state.pattern === "halftone") drawHalftoneField(graphics, phase, opacity, annotations);
+  else if (state.pattern === "echo") drawEchoField(graphics, phase, annotations);
+  else if (state.pattern === "constellation") drawConstellationField(graphics, phase, annotations);
+  else drawOrbitField(graphics, phase, opacity, annotations);
+  context.restore();
+}
+
+function withAlpha(hex) {
+  return hex;
 }
 
 function drawRules(graphics, palette) {
@@ -506,31 +661,22 @@ function binarySignature() {
 }
 
 function drawCover(graphics, phase, palette) {
-  drawGenerativeField(graphics, phase, 0.95, true);
-  graphics.noStroke();
-  graphics.fill(withAlpha(palette.background, 0.9));
-  graphics.rect(54, 770, 972, 490);
+  drawGenerativeField(graphics, phase, 1, true);
   drawRules(graphics, palette);
   drawIndexHeader(graphics, palette, `GENERATIVE_THOUGHTS / INDEX_${pad(activeNumber())}`, `BINARY_${toBinary(activeNumber())}`);
   graphics.fill(palette.bright);
   graphics.textFont(PRINT_FONT);
   graphics.textAlign(graphics.LEFT, graphics.TOP);
   graphics.textStyle(graphics.NORMAL);
-  graphics.textSize(104);
-  graphics.text(toBinary(activeNumber()), 74, 804, 900, 160);
-  graphics.textSize(46);
-  graphics.text((state.title || "UNTITLED").toUpperCase(), 74, 1000, 880, 150);
-  graphics.fill(palette.foreground);
-  graphics.textSize(22);
-  graphics.text(`TEXT_SEED_${stringSeed(state.text).toString(16).toUpperCase().padStart(8, "0")}`, 74, 1192);
+  graphics.textSize(42);
+  graphics.text((state.title || "UNTITLED").toUpperCase(), 64, 1146, 720, 80);
+  graphics.textSize(76);
+  graphics.textAlign(graphics.RIGHT, graphics.TOP);
+  graphics.text(toBinary(activeNumber()), 1016, 1132);
   graphics.textAlign(graphics.LEFT, graphics.BASELINE);
 }
 
 function drawTextSlide(graphics, slide, index, phase, palette) {
-  drawGenerativeField(graphics, phase * 0.15, 0.1, false);
-  graphics.noStroke();
-  graphics.fill(withAlpha(palette.background, 0.93));
-  graphics.rect(42, 40, 996, 1270);
   drawRules(graphics, palette);
   drawIndexHeader(graphics, palette, `INDEX_${pad(activeNumber())} / TEXT_${pad(slide.textIndex + 1, 2)}`, `PAGE_${(index + 1).toString(2)}`);
   const fitted = fitIndexedText(graphics, slide.content);
@@ -556,21 +702,9 @@ function drawPatternSlide(graphics, phase, palette) {
   drawGenerativeField(graphics, phase * 1.3, 1, true);
   drawRules(graphics, palette);
   drawIndexHeader(graphics, palette, `INDEX_${pad(activeNumber())} / INTERRUPTION`, `SEED_${state.visualSeed.toString(16).slice(-6).toUpperCase()}`);
-  graphics.fill(withAlpha(palette.background, 0.8));
-  graphics.noStroke();
-  graphics.rect(64, 1155, 952, 83);
-  graphics.fill(palette.foreground);
-  graphics.textFont(PRINT_FONT);
-  graphics.textSize(22);
-  graphics.textAlign(graphics.LEFT, graphics.BASELINE);
-  graphics.text("[ PATTERN_ONLY / TEXT_SIGNAL_CONTINUES ]", 78, 1205);
 }
 
 function drawSignalSlide(graphics, phase, palette) {
-  drawGenerativeField(graphics, phase * 0.55, 0.24, false);
-  graphics.fill(withAlpha(palette.background, 0.9));
-  graphics.noStroke();
-  graphics.rect(46, 44, 988, 1260);
   drawRules(graphics, palette);
   drawIndexHeader(graphics, palette, `INDEX_${pad(activeNumber())} / LOCAL_SIGNAL`, state.mlVector ? "MODEL_MINILM" : "MODEL_LEXICAL");
   const features = currentFeatures();
@@ -617,18 +751,10 @@ function drawSlide(index, graphics = state.p5, phase = 0) {
   const slide = state.slides[index];
   const palette = PALETTES[state.palette];
   graphics.background(palette.background);
-  graphics.drawingContext.shadowColor = "rgba(23, 20, 15, 0.12)";
-  graphics.drawingContext.shadowBlur = 0.55;
-  graphics.drawingContext.shadowOffsetX = 0.35;
-  graphics.drawingContext.shadowOffsetY = 0.2;
   if (slide.type === "cover") drawCover(graphics, phase, palette);
   else if (slide.type === "text") drawTextSlide(graphics, slide, index, phase, palette);
   else if (slide.type === "pattern") drawPatternSlide(graphics, phase, palette);
   else drawSignalSlide(graphics, phase, palette);
-  graphics.drawingContext.shadowColor = "transparent";
-  graphics.drawingContext.shadowBlur = 0;
-  graphics.drawingContext.shadowOffsetX = 0;
-  graphics.drawingContext.shadowOffsetY = 0;
 }
 
 function renderSequence() {
@@ -644,6 +770,7 @@ function renderSequence() {
 }
 
 function refreshSlides() {
+  state.pattern = compositionFor().mode;
   buildSlides();
   elements.canvasPlaceholder.hidden = Boolean(state.text || state.title);
   drawSlide(state.slideIndex, state.p5, performance.now() / 1000);
@@ -676,6 +803,12 @@ function queueDraftSave() {
   elements.savedState.textContent = "LOCAL/WRITING";
   clearTimeout(state.saveTimer);
   state.saveTimer = setTimeout(persistDraft, 250);
+}
+
+function queueAutomaticModel() {
+  clearTimeout(state.modelTimer);
+  if (state.text.trim().length < 80) return;
+  state.modelTimer = setTimeout(() => runLocalModel(), 2200);
 }
 
 function restoreDraft() {
@@ -790,6 +923,7 @@ function escapeHTML(value) {
 
 async function runLocalModel() {
   if (!state.text.trim()) return showToast("ERR / TEXT_REQUIRED_FOR_MODEL");
+  const sourceText = `${state.title}\n${state.text}`;
   elements.modelButton.disabled = true;
   elements.modelButton.textContent = "LOADING MODEL…";
   state.mlStatus = "LOADING";
@@ -806,7 +940,8 @@ async function runLocalModel() {
         },
       });
     }
-    const result = await state.mlPipeline(`${state.title}\n${state.text}`, { pooling: "mean", normalize: true });
+    const result = await state.mlPipeline(sourceText, { pooling: "mean", normalize: true });
+    if (sourceText !== `${state.title}\n${state.text}`) return;
     state.mlVector = Array.from(result.data.slice(0, 64));
     state.mlStatus = "MINILM";
     persistDraft();
@@ -975,6 +1110,8 @@ async function checkInstagramStatus() {
 }
 
 function openInstagramDialog() {
+  if (!state.text.trim()) return showToast("ERR / STORY_REQUIRED");
+  saveThought();
   elements.apiBaseInput.value = state.apiBase;
   if (!elements.captionInput.value) elements.captionInput.value = state.title || "";
   elements.instagramDialog.showModal();
@@ -1017,6 +1154,10 @@ async function publishToInstagram() {
     if (!response.ok) throw new Error(data.error || `HTTP_${response.status}`);
     elements.instagramMessage.textContent = `PUBLISHED / MEDIA_${data.mediaId}`;
     showToast("INSTAGRAM_CAROUSEL / PUBLISHED");
+    setTimeout(() => {
+      elements.instagramDialog.close();
+      newThought();
+    }, 900);
   } catch (error) {
     elements.instagramMessage.textContent = `ERR / ${error.message}`;
   } finally {
@@ -1061,6 +1202,7 @@ elements.titleInput.addEventListener("input", (event) => {
   state.mlStatus = "LEXICAL";
   refreshSlides();
   queueDraftSave();
+  queueAutomaticModel();
 });
 elements.thoughtInput.addEventListener("input", (event) => {
   state.text = event.target.value;
@@ -1069,6 +1211,7 @@ elements.thoughtInput.addEventListener("input", (event) => {
   state.slideIndex = 0;
   refreshSlides();
   queueDraftSave();
+  queueAutomaticModel();
 });
 elements.patternSelect.addEventListener("change", (event) => {
   state.pattern = event.target.value;
@@ -1096,6 +1239,17 @@ elements.previousSlide.addEventListener("click", () => {
 elements.nextSlide.addEventListener("click", () => {
   state.slideIndex = Math.min(state.slides.length - 1, state.slideIndex + 1);
   renderSequence();
+});
+function showNextPreviewSlide() {
+  state.slideIndex = (state.slideIndex + 1) % state.slides.length;
+  renderSequence();
+}
+elements.previewCanvas.addEventListener("click", showNextPreviewSlide);
+elements.previewCanvas.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    showNextPreviewSlide();
+  }
 });
 elements.downloadCurrent.addEventListener("click", downloadCurrentSlide);
 elements.downloadVideo.addEventListener("click", downloadCoverVideo);

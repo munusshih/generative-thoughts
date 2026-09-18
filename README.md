@@ -10,7 +10,8 @@ Production app: [generative-thoughts.vercel.app](https://generative-thoughts.ver
 - Saves drafts, the numbered index, patterns, and palettes in `localStorage`.
 - Preserves the original text exactly while paginating it across 4:5 slides.
 - Builds a sequence: animated diagram cover, indexed text pages, occasional pattern interruptions, and a local-signal record.
-- Translates the writing into orbital diagrams, directional fields, or low-resolution halftone fields without altering a word.
+- Automatically chooses among axis, orbital, echo, directional, halftone, and constellation systems without altering a word.
+- Scales each system from sparse to dense using text structure, semantic signal, and the current random seed.
 - Uses the post title, length, punctuation, cadence, lexical density, and optional local sentence embedding to control the p5 equations.
 - Counts posts in binary on the cover: `0`, `1`, `10`, `11`, …
 - Exports the 1080 × 1350 cover as a four-second MP4 and the remaining pages as JPEG files, bundled together as a ZIP.
