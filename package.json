@@ -10,6 +10,8 @@
     "check": "npm run build"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.3.0",
+    "@vercel/blob": "^2.8.0",
     "jszip": "3.10.2",
     "p5": "2.3.3"
   },

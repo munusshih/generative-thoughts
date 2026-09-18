@@ -2,3 +2,7 @@
 .sites-runtime/
 node_modules/
 site-dist/
+.vercel/
+.env
+.env.local
+.env.*.local

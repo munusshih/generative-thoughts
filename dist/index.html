@@ -3,114 +3,97 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#101010" />
-    <meta
-      name="description"
-      content="Generative Thoughts — a local-first writing and generative carousel studio."
-    />
+    <meta name="theme-color" content="#050805" />
+    <meta name="description" content="Generative Thoughts — indexed writing translated into ASCII fields." />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="./styles.css" />
     <title>Generative Thoughts</title>
   </head>
   <body>
     <section class="lock-screen" id="lockScreen" aria-labelledby="lockTitle">
-      <div class="lock-card">
-        <p class="eyebrow">generative_thoughts / local_index</p>
-        <h1 id="lockTitle">access</h1>
-        <p class="lock-copy" id="lockCopy">
-          Create a passcode for this browser. Your writing stays here unless you export it.
-        </p>
-        <form id="lockForm">
-          <label for="passcode">Passcode</label>
-          <input
-            id="passcode"
-            name="passcode"
-            type="password"
-            minlength="4"
-            autocomplete="current-password"
-            placeholder="4 or more characters"
-            required
-          />
-          <button class="button button--primary button--wide" id="unlockButton" type="submit">
-            Set passcode
-          </button>
-          <p class="form-error" id="lockError" role="alert"></p>
-        </form>
-        <p class="security-note">
-          This is a personal privacy gate, not server security. Clearing browser data also clears
-          your saved work.
-        </p>
-      </div>
+      <form class="lock-card" id="lockForm">
+        <p class="eyebrow">GENERATIVE_THOUGHTS / LOCAL_INDEX</p>
+        <h1 id="lockTitle">ACCESS_</h1>
+        <p class="lock-copy" id="lockCopy">Create a local passphrase. Writing remains on this device.</p>
+        <label for="passcode">PASSPHRASE</label>
+        <input id="passcode" name="passcode" type="password" minlength="4" autocomplete="current-password" required />
+        <button class="command command--full" id="unlockButton" type="submit">SET PASSPHRASE</button>
+        <p class="form-error" id="lockError" role="alert"></p>
+        <p class="security-note">LOCAL PRIVACY GATE / NOT SERVER AUTHENTICATION</p>
+      </form>
     </section>
 
     <div class="app" id="app" hidden>
       <header class="topbar">
-        <a class="brand" href="#studio" aria-label="Generative Thoughts home">
-          <span aria-hidden="true">[gt]</span>
-          <span>generative_thoughts</span>
-        </a>
+        <a class="brand" href="#studio">GT://INDEX</a>
         <div class="topbar-actions">
-          <span class="saved-state" id="savedState">Saved locally</span>
-          <button class="icon-button" id="lockButton" type="button" aria-label="Lock studio" title="Lock studio">
-            <span aria-hidden="true">⌁</span>
-          </button>
+          <span id="savedState">LOCAL/SAVED</span>
+          <button class="text-command" id="instagramSettings" type="button">INSTAGRAM/OFFLINE</button>
+          <button class="text-command" id="lockButton" type="button">LOCK</button>
         </div>
       </header>
 
       <main class="workspace" id="studio">
         <section class="composer" aria-labelledby="composerTitle">
-          <div class="section-heading">
+          <div class="index-header">
             <div>
-              <p class="eyebrow">entry</p>
-              <h1 id="composerTitle">thought_<span id="thoughtNumber">001</span></h1>
+              <p class="eyebrow">CURRENT_ENTRY</p>
+              <h1 id="composerTitle">INDEX_<span id="thoughtNumber">001</span></h1>
             </div>
-            <button class="button button--quiet" id="newButton" type="button">New</button>
+            <div class="binary-number" aria-label="Binary post number" id="binaryNumber">0</div>
           </div>
 
-          <label class="visually-hidden" for="thoughtInput">Your thought</label>
-          <textarea
-            id="thoughtInput"
-            maxlength="5000"
-            spellcheck="true"
-            placeholder="Write a thought. Your words will not be rewritten."
-          ></textarea>
+          <label class="field field--title" for="titleInput">
+            <span>TITLE</span>
+            <input id="titleInput" maxlength="90" placeholder="untitled thought" />
+          </label>
+
+          <label class="field" for="thoughtInput">
+            <span>TEXT / PRESERVED VERBATIM</span>
+            <textarea id="thoughtInput" maxlength="5000" spellcheck="true" placeholder="type here_"></textarea>
+          </label>
 
           <div class="text-meta">
-            <span><strong id="characterCount">0</strong> / 5,000</span>
-            <span class="integrity-state"><span aria-hidden="true">●</span> Text intact</span>
+            <span id="characterCount">0</span><span>CHARS</span>
+            <span id="wordCount">0</span><span>WORDS</span>
+            <span>[OK] TEXT_INTACT</span>
           </div>
 
           <div class="control-grid">
-            <label class="field">
-              <span>Pattern</span>
+            <label class="field" for="patternSelect">
+              <span>FIELD_EQUATION</span>
               <select id="patternSelect">
-                <option value="orbit">Orbit</option>
-                <option value="weave">Weave</option>
-                <option value="signal">Signal</option>
+                <option value="wave">WAVE_INTERFERENCE</option>
+                <option value="attractor">STRANGE_ATTRACTOR</option>
+                <option value="cellular">CELLULAR_SIGNAL</option>
               </select>
             </label>
-            <label class="field">
-              <span>Palette</span>
+            <label class="field" for="paletteSelect">
+              <span>TERMINAL</span>
               <select id="paletteSelect">
-                <option value="ink">Ink + ember</option>
-                <option value="blue">Electric blue</option>
-                <option value="acid">Acid field</option>
+                <option value="phosphor">PHOSPHOR_GREEN</option>
+                <option value="amber">AMBER_MONITOR</option>
+                <option value="mono">MONOCHROME</option>
               </select>
             </label>
+          </div>
+
+          <div class="signal-panel">
+            <div>
+              <p>TEXT_SIGNAL</p>
+              <output id="signalReadout">LEN:0000 / PUNC:000 / CAD:000 / SEM:LEXICAL</output>
+            </div>
+            <button class="command" id="modelButton" type="button">RUN LOCAL MODEL</button>
           </div>
 
           <div class="composer-actions">
-            <button class="button button--primary" id="saveButton" type="button">Save thought</button>
-            <button class="button button--secondary" id="randomizeButton" type="button">
-              Randomize pattern
-            </button>
+            <button class="command" id="saveButton" type="button">SAVE INDEX</button>
+            <button class="command" id="randomizeButton" type="button">NEW FIELD SEED</button>
+            <button class="command" id="newButton" type="button">NEW ENTRY</button>
           </div>
 
           <details class="archive" id="archiveDetails">
-            <summary>
-              <span>Index</span>
-              <span class="archive-count" id="archiveCount">0</span>
-            </summary>
+            <summary><span>ARCHIVE</span><span id="archiveCount">000</span></summary>
             <div class="archive-list" id="archiveList"></div>
           </details>
         </section>
@@ -118,39 +101,70 @@
         <section class="preview-panel" aria-labelledby="previewTitle">
           <div class="preview-heading">
             <div>
-              <p class="eyebrow">output / instagram_carousel / 4:5</p>
-              <h2 id="previewTitle">preview</h2>
+              <p class="eyebrow">CAROUSEL / 1080×1350 / JPEG</p>
+              <h2 id="previewTitle">OUTPUT_SEQUENCE</h2>
             </div>
-            <span class="slide-count" id="slideCount">01 / 01</span>
+            <div class="preview-index">
+              <span id="slideType">COVER</span>
+              <span id="slideCount">01/03</span>
+            </div>
           </div>
 
           <div class="canvas-wrap">
-            <div id="previewCanvas" role="img" aria-label="Generated p5.js post preview"></div>
-            <p class="canvas-placeholder" id="canvasPlaceholder">Start writing to generate.</p>
+            <div id="previewCanvas" role="img" aria-label="Generated ASCII post preview"></div>
+            <p class="canvas-placeholder" id="canvasPlaceholder">WAITING_FOR_TEXT_</p>
           </div>
 
-          <div class="slide-controls" aria-label="Slide navigation">
-            <button class="icon-button icon-button--light" id="previousSlide" type="button" aria-label="Previous slide">←</button>
-            <div class="slide-dots" id="slideDots" aria-hidden="true"></div>
-            <button class="icon-button icon-button--light" id="nextSlide" type="button" aria-label="Next slide">→</button>
+          <div class="sequence" id="sequence" aria-label="Carousel sequence"></div>
+
+          <div class="slide-controls">
+            <button class="command command--small" id="previousSlide" type="button">PREV</button>
+            <span id="sequenceStatus">COVER → TEXT → LOCAL_SIGNAL</span>
+            <button class="command command--small" id="nextSlide" type="button">NEXT</button>
           </div>
 
           <div class="export-actions">
-            <button class="button button--light" id="downloadCurrent" type="button">Download slide</button>
-            <button class="button button--light" id="downloadAll" type="button">Download all</button>
-            <button class="button button--accent" id="shareButton" type="button">Share</button>
+            <button class="command" id="downloadCurrent" type="button">SAVE FRAME</button>
+            <button class="command" id="downloadAll" type="button">SAVE CAROUSEL</button>
+            <button class="command command--publish" id="publishButton" type="button">PUBLISH TO INSTAGRAM</button>
           </div>
-          <p class="export-note" id="exportNote">
-            Exports are 1080 × 1350 PNG. On iPhone, Share opens the native share sheet.
-          </p>
+          <p class="export-note" id="exportNote">ANIMATION RUNS HERE / EXPORT FREEZES ONE DETERMINISTIC FRAME</p>
         </section>
       </main>
 
       <footer>
-        <span>Local-first prototype · v0.1</span>
-        <button id="resetPasscode" type="button">Reset local studio</button>
+        <span>GENERATIVE_THOUGHTS / LOCAL_FIRST / P5.JS</span>
+        <button id="resetPasscode" type="button">RESET LOCAL INDEX</button>
       </footer>
     </div>
+
+    <dialog id="instagramDialog">
+      <form method="dialog" class="dialog-shell">
+        <div class="dialog-heading">
+          <h2>INSTAGRAM_OUTPUT</h2>
+          <button class="text-command" value="cancel">CLOSE</button>
+        </div>
+        <p>Direct publishing uses a private server bridge. Tokens never belong in this page or repository.</p>
+        <dl class="connection-status">
+          <div><dt>ACCOUNT</dt><dd id="instagramAccount">NOT_CONFIGURED</dd></div>
+          <div><dt>BACKEND</dt><dd id="instagramBackend">NOT_CONNECTED</dd></div>
+          <div><dt>FORMAT</dt><dd>PROFESSIONAL_CAROUSEL / 2–10 JPEG</dd></div>
+        </dl>
+        <label class="field" for="apiBaseInput">
+          <span>PUBLISH_SERVER_URL / BLANK FOR SAME ORIGIN</span>
+          <input id="apiBaseInput" type="url" placeholder="https://your-project.vercel.app" />
+        </label>
+        <label class="field" for="captionInput">
+          <span>CAPTION</span>
+          <textarea id="captionInput" maxlength="2200" placeholder="optional caption"></textarea>
+        </label>
+        <div class="dialog-actions">
+          <button class="command" id="saveInstagramSettings" type="button">SAVE SERVER</button>
+          <button class="command command--publish" id="confirmPublish" type="button">PUBLISH NOW</button>
+        </div>
+        <p class="dialog-note" id="instagramMessage">SERVER_NOT_CONFIGURED</p>
+      </form>
+    </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="./app.js" type="module"></script>

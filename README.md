@@ -1,14 +1,17 @@
 # Generative Thoughts
 
-A local-first p5.js studio for turning intact writing into numbered, generative Instagram carousels.
+A local-first p5.js publishing instrument for turning intact writing into numbered ASCII/terminal Instagram carousels.
 
 ## What works now
 
 - Creates a passcode hash in this browser using Web Crypto.
 - Saves drafts, the numbered index, patterns, and palettes in `localStorage`.
 - Preserves the original text exactly while paginating it across 4:5 slides.
-- Produces deterministic p5.js visuals from the writing, with a separate visual seed for randomization.
-- Exports 1080 × 1350 PNG files, bundles full carousels as ZIPs, and uses the native share sheet when the browser supports it.
+- Builds a sequence: animated ASCII cover, indexed text pages, occasional pattern interruptions, and a local-signal record.
+- Uses the post title, length, punctuation, cadence, lexical density, and optional local sentence embedding to control the p5 equations.
+- Counts posts in binary on the cover: `0`, `1`, `10`, `11`, …
+- Exports 1080 × 1350 JPEG files and bundles the full carousel as a ZIP.
+- Can publish a 2–10 image carousel directly to an Instagram Professional account through the included secure server bridge.
 - Uses Vite for a small, conventional build that is easy to extend with existing creative-coding libraries.
 
 ## Run locally
@@ -29,17 +32,28 @@ The passcode is a personal privacy gate, not server authentication. Its salted h
 
 Write, index, randomize, export, and share without an account or backend. The visual engine is p5.js in instance mode so each pattern can grow into a reusable sketch module.
 
-### Phase 2 — cross-device continuity
+### Direct Instagram publishing
 
-Add real authentication and an encrypted hosted database so the laptop and phone share one index. Keep local-first drafts for resilience.
+Instagram tokens must never be stored in browser code. Deploy the repository to Vercel, provision Vercel Blob, and configure the values in `.env.example` as server environment variables:
 
-### Phase 3 — Instagram publishing
+- `INSTAGRAM_USER_ID`
+- `INSTAGRAM_USERNAME`
+- `INSTAGRAM_ACCESS_TOKEN`
+- `PUBLISH_SECRET` — use the same phrase as the local studio passphrase
+- `BLOB_READ_WRITE_TOKEN`
+- `ALLOWED_ORIGIN`
 
-Add a small server component for Meta's Instagram Content Publishing API. Access tokens must never be stored in browser code. Until then, `Share` is the safest low-friction mobile publishing path.
+The Instagram account must be a Business or Creator account and the Meta app/token must have `instagram_business_basic` and `instagram_business_content_publish`. The server temporarily hosts each JPEG, creates the carousel containers, publishes the post, then deletes the temporary files.
 
-### Phase 4 — gentle machine intelligence
+GitHub Pages continues to host the static studio. In `INSTAGRAM_OUTPUT`, set the deployed Vercel URL as the publish server. If the entire app is hosted on Vercel, leave the server URL blank.
 
-Start with an optional local “visual interpreter” that maps writing features—length, punctuation, repetition, and cadence—to pattern parameters. A later LLM can suggest non-destructive metadata such as a caption, alt text, or tags. The source thought should remain immutable and visibly separate from suggestions.
+### Local machine intelligence
+
+`RUN LOCAL MODEL` loads a quantized MiniLM sentence-embedding model through Transformers.js. Inference runs in the browser; the resulting vector becomes a binary semantic signature and additional pattern parameters. The text is never rewritten. The first run downloads the model and caches it in the browser.
+
+### Cross-device continuity
+
+The current index remains device-local. A later sync layer can add real authentication and encrypted storage without changing the carousel generator.
 
 ## Project structure
 
@@ -50,6 +64,7 @@ dist/                  # authored site
   app.js
   favicon.svg
 site-dist/             # generated production build (ignored)
+api/instagram/         # secure Vercel publishing functions
 ```
 
 Run `npm run build` to generate `site-dist`, the folder GitHub Pages publishes.
