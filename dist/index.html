@@ -10,21 +10,7 @@
     <title>Generative Thoughts</title>
   </head>
   <body>
-    <section class="lock-screen" id="lockScreen" aria-labelledby="lockTitle">
-      <form class="lock-card" id="lockForm">
-        <p class="eyebrow">GENERATIVE_THOUGHTS / LOCAL_INDEX</p>
-        <h1 id="lockTitle">ACCESS_</h1>
-        <p class="lock-copy" id="lockCopy">Create a local passphrase. Writing remains on this device.</p>
-        <label for="passcode">PASSPHRASE</label>
-        <input id="passcode" name="passcode" type="password" minlength="4" autocomplete="current-password" required />
-        <button class="command command--full" id="unlockButton" type="submit">SET PASSPHRASE</button>
-        <p class="form-error" id="lockError" role="alert"></p>
-        <p class="security-note">LOCAL PRIVACY GATE / NOT SERVER AUTHENTICATION</p>
-        <button class="text-command reset-lock" id="resetLockedIndex" type="button">FORGOT PASSPHRASE / RESET LOCAL INDEX</button>
-      </form>
-    </section>
-
-    <div class="app" id="app" hidden>
+    <div class="app" id="app">
       <main class="workspace" id="studio">
         <section class="composer" aria-label="Write a generative thought">
           <div class="entry-number" aria-label="Current binary index">GT/<span id="binaryNumber">0</span></div>
@@ -52,13 +38,13 @@
       </main>
 
       <div hidden aria-hidden="true">
-        <span id="savedState"></span><button id="instagramSettings"></button><button id="lockButton"></button>
+        <span id="savedState"></span><button id="instagramSettings"></button>
         <span id="thoughtNumber"></span><span id="characterCount"></span><span id="wordCount"></span>
         <select id="patternSelect"><option value="orbit"></option><option value="axis"></option><option value="vector"></option><option value="halftone"></option><option value="echo"></option><option value="constellation"></option></select>
         <output id="signalReadout"></output><button id="modelButton"></button><button id="saveButton"></button><button id="newButton"></button>
         <span id="archiveCount"></span><div id="archiveList"></div><span id="slideType"></span><div id="sequence"></div><span id="sequenceStatus"></span>
         <button id="previousSlide"></button><button id="nextSlide"></button><button id="downloadCurrent"></button><button id="downloadVideo"></button><button id="downloadAll"></button>
-        <span id="exportNote"></span><button id="resetPasscode"></button>
+        <span id="exportNote"></span>
       </div>
     </div>
 

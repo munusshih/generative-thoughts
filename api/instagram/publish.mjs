@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import { del, put } from "@vercel/blob";
 
 const GRAPH_HOST = process.env.META_GRAPH_HOST || "https://graph.instagram.com";
@@ -11,7 +10,6 @@ export default async function handler(request, response) {
   if (request.method === "OPTIONS") return response.status(204).end();
   if (request.method !== "POST") return response.status(405).json({ error: "METHOD_NOT_ALLOWED" });
   if (!serverConfigured()) return response.status(503).json({ error: "INSTAGRAM_SERVER_NOT_CONFIGURED" });
-  if (!secretMatches(request.headers["x-publish-secret"] || "")) return response.status(401).json({ error: "PUBLISH_SECRET_MISMATCH" });
 
   const { slides, caption = "", index = 0, title = "untitled" } = request.body || {};
   if (!Array.isArray(slides) || slides.length < 2 || slides.length > 10) {
@@ -74,15 +72,8 @@ function serverConfigured() {
   return Boolean(
     process.env.INSTAGRAM_USER_ID
       && process.env.INSTAGRAM_ACCESS_TOKEN
-      && process.env.PUBLISH_SECRET
       && process.env.BLOB_READ_WRITE_TOKEN
   );
-}
-
-function secretMatches(candidate) {
-  const expected = Buffer.from(process.env.PUBLISH_SECRET || "");
-  const received = Buffer.from(candidate);
-  return expected.length === received.length && expected.length > 0 && crypto.timingSafeEqual(expected, received);
 }
 
 async function graphPost(path, values) {
@@ -115,6 +106,6 @@ function setCors(request, response) {
   const requestOrigin = request.headers.origin;
   response.setHeader("Access-Control-Allow-Origin", allowedOrigin === "*" ? "*" : requestOrigin === allowedOrigin ? requestOrigin : allowedOrigin);
   response.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
-  response.setHeader("Access-Control-Allow-Headers", "Content-Type,X-Publish-Secret");
+  response.setHeader("Access-Control-Allow-Headers", "Content-Type");
   response.setHeader("Cache-Control", "no-store");
 }

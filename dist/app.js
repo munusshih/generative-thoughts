@@ -37,19 +37,17 @@ const state = {
   saveTimer: null,
   modelTimer: null,
   p5: null,
-  passphrase: "",
   apiBase: localStorage.getItem(STORAGE.apiBase) || "",
   instagramConnected: false,
 };
 
 const elements = Object.fromEntries(
   [
-    "app", "lockScreen", "lockForm", "lockCopy", "passcode", "unlockButton", "lockError", "lockButton",
-    "titleInput", "thoughtInput", "thoughtNumber", "binaryNumber", "characterCount", "wordCount", "patternSelect",
+    "app", "titleInput", "thoughtInput", "thoughtNumber", "binaryNumber", "characterCount", "wordCount", "patternSelect",
     "signalReadout", "modelButton", "saveButton", "randomizeButton", "newButton", "savedState",
     "archiveCount", "archiveList", "previewCanvas", "canvasPlaceholder", "slideType", "slideCount", "sequence",
     "sequenceStatus", "previousSlide", "nextSlide", "downloadCurrent", "downloadVideo", "downloadAll", "publishButton", "exportNote",
-    "resetPasscode", "resetLockedIndex", "instagramSettings", "instagramDialog", "instagramAccount", "instagramBackend", "apiBaseInput",
+    "instagramSettings", "instagramDialog", "instagramAccount", "instagramBackend", "apiBaseInput",
     "captionInput", "saveInstagramSettings", "confirmPublish", "instagramMessage", "toast",
   ].map((id) => [id, document.querySelector(`#${id}`)])
 );
@@ -95,67 +93,6 @@ function toBinary(number) {
 
 function activeNumber() {
   return state.entries.find((entry) => entry.id === state.currentId)?.index ?? state.settings?.nextIndex ?? 1;
-}
-
-function bufferToHex(buffer) {
-  return [...new Uint8Array(buffer)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
-function randomHex(bytes = 16) {
-  return [...crypto.getRandomValues(new Uint8Array(bytes))]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-async function hashPasscode(passcode, salt) {
-  const data = new TextEncoder().encode(`${salt}:${passcode}`);
-  return bufferToHex(await crypto.subtle.digest("SHA-256", data));
-}
-
-function setLockMode() {
-  const returning = Boolean(state.settings?.passcodeHash);
-  elements.lockCopy.textContent = returning
-    ? "Enter the passphrase stored for this local index."
-    : "Create a local passphrase. Writing remains on this device.";
-  elements.unlockButton.textContent = returning ? "UNLOCK INDEX" : "SET PASSPHRASE";
-  elements.passcode.autocomplete = returning ? "current-password" : "new-password";
-  elements.lockError.textContent = "";
-}
-
-async function handleLockSubmit(event) {
-  event.preventDefault();
-  const passphrase = elements.passcode.value;
-  if (passphrase.length < 4) {
-    elements.lockError.textContent = "ERR / MINIMUM 4 CHARACTERS";
-    return;
-  }
-
-  if (!state.settings?.passcodeHash) {
-    const salt = randomHex();
-    state.settings = { passcodeHash: await hashPasscode(passphrase, salt), salt, nextIndex: 1 };
-    saveJSON(STORAGE.settings, state.settings);
-  } else if ((await hashPasscode(passphrase, state.settings.salt)) !== state.settings.passcodeHash) {
-    elements.lockError.textContent = "ERR / PASSPHRASE MISMATCH";
-    elements.passcode.select();
-    return;
-  }
-
-  state.passphrase = passphrase;
-  elements.passcode.value = "";
-  elements.lockScreen.hidden = true;
-  elements.app.hidden = false;
-  restoreDraft();
-  refreshAll();
-  checkInstagramStatus();
-  elements.titleInput.focus();
-}
-
-function lockStudio() {
-  state.passphrase = "";
-  elements.app.hidden = true;
-  elements.lockScreen.hidden = false;
-  setLockMode();
-  elements.passcode.focus();
 }
 
 function stringSeed(value) {
@@ -1147,7 +1084,7 @@ async function publishToInstagram() {
     elements.confirmPublish.textContent = "PUBLISHING…";
     const response = await fetch(apiUrl("/api/instagram/publish"), {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Publish-Secret": state.passphrase },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ slides, caption: elements.captionInput.value, index: activeNumber(), title: state.title }),
     });
     const data = await response.json();
@@ -1174,28 +1111,6 @@ function showToast(message) {
   toastTimer = setTimeout(() => elements.toast.classList.remove("is-visible"), 2400);
 }
 
-let resetArmed = false;
-let resetArmTimer;
-function resetStudio(event) {
-  const button = event?.currentTarget;
-  if (!resetArmed) {
-    resetArmed = true;
-    button.textContent = "CONFIRM RESET / DELETE LOCAL WRITING";
-    clearTimeout(resetArmTimer);
-    resetArmTimer = setTimeout(() => {
-      resetArmed = false;
-      button.textContent = button === elements.resetLockedIndex
-        ? "FORGOT PASSPHRASE / RESET LOCAL INDEX"
-        : "RESET LOCAL INDEX";
-    }, 15000);
-    return;
-  }
-  Object.values(STORAGE).forEach((key) => localStorage.removeItem(key));
-  window.location.reload();
-}
-
-elements.lockForm.addEventListener("submit", handleLockSubmit);
-elements.lockButton.addEventListener("click", lockStudio);
 elements.titleInput.addEventListener("input", (event) => {
   state.title = event.target.value;
   state.mlVector = null;
@@ -1258,8 +1173,6 @@ elements.publishButton.addEventListener("click", openInstagramDialog);
 elements.instagramSettings.addEventListener("click", openInstagramDialog);
 elements.saveInstagramSettings.addEventListener("click", saveInstagramServer);
 elements.confirmPublish.addEventListener("click", publishToInstagram);
-elements.resetPasscode.addEventListener("click", resetStudio);
-elements.resetLockedIndex.addEventListener("click", resetStudio);
 
 new p5((sketch) => {
   sketch.setup = () => {
@@ -1277,5 +1190,9 @@ new p5((sketch) => {
   };
 }, elements.previewCanvas);
 
-setLockMode();
-elements.passcode.focus();
+state.settings = { nextIndex: Number.isInteger(state.settings?.nextIndex) ? state.settings.nextIndex : 1 };
+saveJSON(STORAGE.settings, state.settings);
+restoreDraft();
+refreshAll();
+checkInstagramStatus();
+elements.titleInput.focus();

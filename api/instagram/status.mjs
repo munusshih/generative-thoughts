@@ -6,7 +6,6 @@ export default function handler(request, response) {
   const configured = Boolean(
     process.env.INSTAGRAM_USER_ID
       && process.env.INSTAGRAM_ACCESS_TOKEN
-      && process.env.PUBLISH_SECRET
       && process.env.BLOB_READ_WRITE_TOKEN
   );
 
@@ -20,6 +19,6 @@ function setCors(request, response) {
   const requestOrigin = request.headers.origin;
   response.setHeader("Access-Control-Allow-Origin", allowedOrigin === "*" ? "*" : requestOrigin === allowedOrigin ? requestOrigin : allowedOrigin);
   response.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
-  response.setHeader("Access-Control-Allow-Headers", "Content-Type,X-Publish-Secret");
+  response.setHeader("Access-Control-Allow-Headers", "Content-Type");
   response.setHeader("Cache-Control", "no-store");
 }

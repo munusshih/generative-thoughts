@@ -4,9 +4,9 @@
   "private": true,
   "description": "A local-first p5.js studio for turning intact writing into generative Instagram carousels.",
   "scripts": {
-    "dev": "vite dist --host 0.0.0.0",
+    "dev": "node local-server.mjs",
     "build": "vite build dist --outDir ../site-dist --emptyOutDir",
-    "preview": "vite preview --host 0.0.0.0 --outDir site-dist",
+    "start": "node local-server.mjs",
     "check": "npm run build"
   },
   "dependencies": {
