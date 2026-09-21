@@ -6,3 +6,11 @@ site-dist/
 .env
 .env.local
 .env.*.local
+
+# Large local model weights and generated runtime data.
+/public/models/
+/data/index.json
+/thoughts/*.md
+!/thoughts/.gitkeep
+/published/
+/cache/

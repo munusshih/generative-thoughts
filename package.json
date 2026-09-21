@@ -7,13 +7,13 @@
     "dev": "node local-server.mjs",
     "start": "node local-server.mjs",
     "build": "vite build dist --outDir ../site-dist --emptyOutDir",
-    "check": "npm run build"
+    "test": "node --test",
+    "check": "npm test && npm run build && node --check local-server.mjs"
   },
   "dependencies": {
-    "@huggingface/transformers": "^4.3.0",
+    "@huggingface/transformers": "^3.8.1",
     "@ibm/plex-mono": "^2.5.0",
     "jszip": "3.10.2",
-    "mediabunny": "^1.58.0",
     "p5": "2.3.3"
   },
   "devDependencies": {

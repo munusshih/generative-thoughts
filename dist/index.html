@@ -1,24 +1,49 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Generative Thoughts</title>
   <link rel="stylesheet" href="./style.css" />
 </head>
+
 <body>
   <main id="app">
     <section class="workspace">
+
       <section class="writing">
-        <textarea id="titleInput" class="title-input" rows="1" spellcheck="true" placeholder="Title"></textarea>
-        <textarea id="thoughtInput" class="thought-input" spellcheck="true" placeholder="Write."></textarea>
+
+        <div class="thought-switcher-wrap">
+          <select id="thoughtSwitcher" aria-label="Thoughts"></select>
+        </div>
+
+        <textarea id="titleInput" class="title-input" rows="1" spellcheck="true"
+          placeholder="Title"></textarea>
+
+        <textarea id="thoughtInput" class="thought-input" spellcheck="true"
+          placeholder="Write."></textarea>
+
       </section>
 
       <section class="preview">
-        <div id="previewCanvas" class="canvas-shell" tabindex="0" aria-label="Preview. Click to advance."></div>
+        <div id="previewCanvas" class="canvas-shell" tabindex="0"
+          aria-label="Preview. Click to advance."></div>
       </section>
 
-      <button id="publishButton" class="publish-button" type="button">PUBLISH</button>
+      <div class="actions">
+        <button id="randomVisualButton" type="button">
+          RANDOM VISUAL
+        </button>
+
+        <button id="publishButton" type="button">
+          PUBLISH
+        </button>
+        <button id="analysisButton" type="button">
+          ANALYSIS
+        </button>
+      </div>
+
     </section>
 
     <div id="modelProgress" class="model-progress" aria-hidden="true">
@@ -30,4 +55,5 @@
 
   <script type="module" src="./app.js"></script>
 </body>
+
 </html>

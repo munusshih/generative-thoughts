@@ -19,7 +19,7 @@ export async function saveThought(payload) {
     body: JSON.stringify(payload),
   });
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error || "Save failed");
+  if (!response.ok) throw new Error(data.message || data.error || "Save failed");
   return data;
 }
 
@@ -30,6 +30,6 @@ export async function saveAnalysis(payload) {
     body: JSON.stringify(payload),
   });
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error || "Analysis save failed");
+  if (!response.ok) throw new Error(data.message || data.error || "Analysis save failed");
   return data;
 }

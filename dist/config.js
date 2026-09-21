@@ -33,16 +33,16 @@ export const PALETTE = {
 };
 
 export const LAYOUT = {
-  margin: 72,
-  left: 72,
-  top: 72,
-  right: 1008,
-  bottom: 1278,
-  width: 936,
-  height: 1206,
-  coverArtTop: 174,
-  coverArtBottom: 1048,
-  coverTitleY: 1126,
+  margin: 128,
+  left: 128,
+  top: 128,
+  right: 952,
+  bottom: 1222,
+  width: 824,
+  height: 1094,
+  coverArtTop: 244,
+  coverArtBottom: 974,
+  coverTitleY: 1076,
 };
 
 export const TYPE = {
@@ -52,9 +52,11 @@ export const TYPE = {
 
 export const TYPING_PAUSE_MS = 5000;
 export const AUTO_SAVE_MS = 900;
-export const AUTO_ANALYZE_MS = 7000;
 
 export const AI = {
+  synthesisModel: "",
+
   embeddingModel: "mixedbread-ai/mxbai-embed-xsmall-v1",
-  synthesisModel: "onnx-community/Qwen3-0.6B-Instruct-ONNX",
+
+  // keep your other existing config here
 };

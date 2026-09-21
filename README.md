@@ -1,43 +1,55 @@
 # Generative Thoughts v8 — more organic
 
+## Start
+
+Double-click `start.command`, or run:
+
+```sh
+npm start
+```
+
+The command starts the local app and opens <http://localhost:9999> automatically.
+If the app is already running, using the command again opens the existing app instead
+of failing with a port-in-use error.
+
+Project boundaries and local-data rules are documented in
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). The planned image-to-ASCII interlude
+is specified separately in
+[`docs/NEXT_STAGE_IMAGE_INTERLUDE.md`](docs/NEXT_STAGE_IMAGE_INTERLUDE.md).
+
 This revision keeps the minimal interface from v7, but changes four major things:
 
 ## 1. Background texture
 Every note now has a subtle background texture system, generated from the note itself.
 
-Possible texture layers include:
-- speckle
-- dust
-- scan lines
-- crosshatch
-- light grid
-- drifting micro-lines
+The background uses only subtle paper-like texture:
+- fine dust
+- sparse short fibers
+- very soft mottling
 
-The texture is intentionally quiet and minimal, but no longer a flat empty ground.
+There are no grids, scan lines, crosshatching, or other lined patterns.
 
-## 2. Richer ASCII cover engine
-The cover is no longer only a hollow field system.
+## 2. Structured ASCII cover engine
+Each cover selects one explicit parameterized mathematical family:
 
-It now combines:
-- multiple mathematical scalar fields
-- multiple overlaid trace systems
-- L-system traces
-- orbital traces
-- flow / field polylines
-- contourization
-- void masks
-- symmetry breaking
-- denser glyph mapping
+- spatial Lissajous curve
+- torus knot
+- trefoil knot
+- spherical orbit
+- three-dimensional harmonograph
+- spatial hypotrochoid
+- shell helix
 
-So the image can become more:
-- organic
-- nested
-- legible
-- cosmic
-- computational
-- layered
+The selected function becomes a coherent figure rather than a stack of unrelated
+fields. Three-dimensional points are projected with perspective, and depth changes
+the width of thin parallel contours. The figure is plotted with fully opaque repeated
+digits, directional symbols, punctuation, and occasional cosmic marks rather than
+heavy filled geometry.
 
-while still remaining ASCII.
+Use `RANDOM VISUAL` to generate a new function, palette, parameters, and glyph system
+without changing the writing.
+
+The cover is a static image in both the live preview and the local publication.
 
 ## 3. Duotone theme selection
 Each note now chooses an accessible minimal duotone palette from several soft combinations.
@@ -66,8 +78,8 @@ instead of colder system language.
 Everything else from v7 still holds:
 - localhost:9999
 - auto-save
-- auto-analysis
-- automatic browser model download
+- on-demand local analysis (the model loads only after `ANALYSIS` or `PUBLISH`)
+- editable thought history through the archive selector
 - one type size
 - manual line breaks preserved
-- publish through one button
+- publish JPG pages, MP4 synthesis pages, Markdown, and local-model traces through one button

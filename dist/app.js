@@ -1,32 +1,12 @@
 import p5 from "p5";
 
 import {
-  AUTO_ANALYZE_MS,
-  AUTO_SAVE_MS,
   CANVAS,
   PRINT_FONT,
-  STORAGE,
   printFontReady,
 } from "./config.js";
 
-import {
-  loadJSON,
-  normalizeTyping,
-  saveJSON,
-  stringSeed,
-  trackTyping,
-} from "./helpers.js";
-
-import {
-  listThoughts,
-  saveAnalysis,
-  saveThought,
-} from "./archive.js";
-
-import {
-  analyzeLocally,
-  warmModels,
-} from "./ai.js";
+import { trackTyping } from "./helpers.js";
 
 import {
   applyThemeToDocument,
@@ -35,98 +15,77 @@ import {
 } from "./visuals.js";
 
 import { publishCarousel } from "./export.js";
+import { createAnalysisSession } from "./studio/analysis-session.js";
+import { createArchiveSession } from "./studio/archive-session.js";
+import {
+  NEW_THOUGHT,
+  createStudioState,
+  persistRecovery,
+  restoreRecovery,
+} from "./studio/state.js";
 
 const elements = {
   title: document.querySelector("#titleInput"),
   text: document.querySelector("#thoughtInput"),
   preview: document.querySelector("#previewCanvas"),
+  switcher: document.querySelector("#thoughtSwitcher"),
+  randomVisual: document.querySelector("#randomVisualButton"),
   publish: document.querySelector("#publishButton"),
+  analysis: document.querySelector("#analysisButton"),
   progress: document.querySelector("#modelProgress"),
   progressFill: document.querySelector("#modelProgressFill"),
   toast: document.querySelector("#toast"),
 };
 
-const state = {
-  id: null,
-  currentIndex: null,
-  nextIndex: 1,
+const state = createStudioState();
 
-  title: "",
-  text: "",
-
-  createdAt: new Date().toISOString(),
-  updatedAt: null,
-
-  typing: normalizeTyping(),
-
-  visualSeed: crypto.getRandomValues(new Uint32Array(1))[0],
-  machineAnalysis: null,
-
-  slides: [],
-  slideIndex: 0,
-
-  p5: null,
-  saveTimer: null,
-  analysisTimer: null,
-  revision: 0,
-  analyzingRevision: null,
-};
-
+let archiveThoughts = [];
 let toastTimer;
+let progressFrame;
 let modelProgressValue = 0;
+
+function errorMessage(error, fallback) {
+  const message = String(error?.message || "").trim();
+  return message && message.length <= 120 ? message : fallback;
+}
 
 function toast(message) {
   elements.toast.textContent = message;
   elements.toast.classList.add("is-visible");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => elements.toast.classList.remove("is-visible"), 1600);
+  toastTimer = setTimeout(() => elements.toast.classList.remove("is-visible"), 2600);
 }
 
 function showModelProgress(progress) {
+  state.aiProgress = progress || null;
   elements.progress.classList.add("is-active");
 
-  if (typeof progress?.progress === "number") {
-    modelProgressValue = Math.max(modelProgressValue, progress.progress);
+  const reported = Number.isFinite(progress?.percent)
+    ? progress.percent
+    : progress?.progress;
+
+  if (Number.isFinite(reported)) {
+    modelProgressValue = Math.max(modelProgressValue, reported);
   } else {
     modelProgressValue = Math.max(modelProgressValue, 2);
   }
 
   elements.progressFill.style.width = `${Math.min(100, modelProgressValue)}%`;
+
+  if (!progressFrame) {
+    progressFrame = requestAnimationFrame(() => {
+      progressFrame = null;
+      refreshPreview();
+    });
+  }
 }
 
 function hideModelProgress() {
+  state.aiProgress = null;
   modelProgressValue = 0;
   elements.progressFill.style.width = "0%";
   elements.progress.classList.remove("is-active");
-}
-
-function persistRecovery() {
-  saveJSON(STORAGE.draft, {
-    id: state.id,
-    currentIndex: state.currentIndex,
-    title: state.title,
-    text: state.text,
-    createdAt: state.createdAt,
-    updatedAt: state.updatedAt,
-    typing: state.typing,
-    visualSeed: state.visualSeed,
-  });
-}
-
-function restoreRecovery() {
-  const draft = loadJSON(STORAGE.draft, null);
-  if (!draft) return;
-
-  Object.assign(state, {
-    id: draft.id ?? null,
-    currentIndex: draft.currentIndex ?? null,
-    title: draft.title ?? "",
-    text: draft.text ?? "",
-    createdAt: draft.createdAt ?? new Date().toISOString(),
-    updatedAt: draft.updatedAt ?? null,
-    typing: normalizeTyping(draft.typing),
-    visualSeed: draft.visualSeed ?? stringSeed(`${draft.title || ""}|${draft.text || ""}`),
-  });
+  refreshPreview();
 }
 
 function refreshPreview() {
@@ -134,12 +93,7 @@ function refreshPreview() {
 
   applyThemeToDocument(state);
   buildSlides(state, state.p5);
-
-  state.slideIndex = Math.min(
-    state.slideIndex,
-    Math.max(0, state.slides.length - 1)
-  );
-
+  state.slideIndex = Math.min(state.slideIndex, Math.max(0, state.slides.length - 1));
   drawSlide(state.slideIndex, state, state.p5, performance.now() / 1000);
 }
 
@@ -148,92 +102,70 @@ function autosizeTitle() {
   elements.title.style.height = `${Math.max(24, elements.title.scrollHeight)}px`;
 }
 
-async function refreshArchiveIndex() {
-  try {
-    const data = await listThoughts();
-    state.nextIndex = data.nextIndex || 1;
-  } catch {}
+function updateEditor() {
+  elements.title.value = state.title;
+  elements.text.value = state.text;
+  autosizeTitle();
 }
 
-async function saveNow() {
-  persistRecovery();
+function renderThoughtSwitcher() {
+  if (!elements.switcher) return;
 
-  if (!state.text.trim()) return null;
+  const fragment = document.createDocumentFragment();
+  const newOption = document.createElement("option");
+  newOption.value = NEW_THOUGHT;
+  newOption.textContent = "+ new thought";
+  fragment.append(newOption);
 
-  const saved = await saveThought({
-    id: state.id,
-    index: state.currentIndex || state.nextIndex,
-    title: state.title,
-    text: state.text,
-    createdAt: state.createdAt,
-    typingMs: state.typing.activeMs,
-    visualSeed: state.visualSeed,
-  });
+  for (const thought of archiveThoughts) {
+    const option = document.createElement("option");
+    option.value = thought.id;
+    const number = String(thought.index || 0).padStart(3, "0");
+    option.textContent = `#${number} ${thought.title || "Untitled"}`;
+    fragment.append(option);
+  }
 
-  state.id = saved.id;
-  state.currentIndex = saved.index;
-  state.createdAt = saved.createdAt;
-  state.updatedAt = saved.updatedAt;
-
-  persistRecovery();
-  await refreshArchiveIndex();
-
-  return saved;
+  elements.switcher.replaceChildren(fragment);
+  elements.switcher.value = state.id || NEW_THOUGHT;
 }
 
-function queueSave() {
-  clearTimeout(state.saveTimer);
-  state.saveTimer = setTimeout(() => { saveNow().catch(() => {}); }, AUTO_SAVE_MS);
-}
-
-function queueAnalysis() {
-  clearTimeout(state.analysisTimer);
-  if (state.text.trim().length < 80) return;
-
-  const revision = state.revision;
-  state.analysisTimer = setTimeout(() => {
-    runAutomaticAnalysis(revision).catch(() => {});
-  }, AUTO_ANALYZE_MS);
-}
-
-async function runAutomaticAnalysis(revision) {
-  if (state.analyzingRevision === revision) return;
-  if (revision !== state.revision) return;
-  if (state.text.trim().length < 80) return;
-
-  const saved = await saveNow();
-  if (!saved || revision !== state.revision) return;
-
-  state.analyzingRevision = revision;
-
-  try {
-    modelProgressValue = 0;
-    elements.progress.classList.add("is-active");
-
-    const local = await analyzeLocally(
-      state.title,
-      state.text,
-      showModelProgress
-    );
-
-    if (revision !== state.revision) return;
-
-    const stored = await saveAnalysis({
-      id: state.id,
-      ...local,
-    });
-
-    if (revision !== state.revision) return;
-
-    state.machineAnalysis = stored;
+const archiveSession = createArchiveSession({
+  state,
+  onArchiveChanged(thoughts) {
+    archiveThoughts = thoughts;
+    renderThoughtSwitcher();
+  },
+  onStateChanged() {
+    updateEditor();
     refreshPreview();
+  },
+  onError(error, fallback) {
+    console.error(error);
+    toast(errorMessage(error, fallback));
+  },
+});
+
+const analysisSession = createAnalysisSession({
+  state,
+  saveNow: () => archiveSession.saveNow(),
+  showProgress: showModelProgress,
+  hideProgress: hideModelProgress,
+  refreshPreview,
+});
+
+async function switchThought(targetId) {
+  if (targetId === (state.id || NEW_THOUGHT)) return;
+
+  elements.switcher.disabled = true;
+
+  try {
+    await archiveSession.switchTo(targetId);
   } catch (error) {
     console.error(error);
+    renderThoughtSwitcher();
+    toast(errorMessage(error, "Could not open that thought"));
   } finally {
-    if (state.analyzingRevision === revision) {
-      state.analyzingRevision = null;
-    }
-    hideModelProgress();
+    elements.switcher.disabled = false;
   }
 }
 
@@ -242,11 +174,9 @@ function recordInput() {
   state.machineAnalysis = null;
   state.slideIndex = 0;
   state.revision += 1;
-
-  persistRecovery();
+  persistRecovery(state);
   refreshPreview();
-  queueSave();
-  queueAnalysis();
+  archiveSession.queueSave();
 }
 
 elements.title.addEventListener("input", (event) => {
@@ -260,9 +190,23 @@ elements.text.addEventListener("input", (event) => {
   recordInput();
 });
 
+elements.switcher?.addEventListener("change", (event) => {
+  switchThought(event.target.value).catch(console.error);
+});
+
+elements.randomVisual?.addEventListener("click", () => {
+  state.visualSeed = crypto.getRandomValues(new Uint32Array(1))[0];
+  state.revision += 1;
+  state.slideIndex = 0;
+  persistRecovery(state);
+  refreshPreview();
+  archiveSession.queueSave();
+});
+
 elements.preview.addEventListener("click", () => {
   if (!state.slides.length) return;
   state.slideIndex = (state.slideIndex + 1) % state.slides.length;
+  refreshPreview();
 });
 
 elements.preview.addEventListener("keydown", (event) => {
@@ -271,31 +215,52 @@ elements.preview.addEventListener("keydown", (event) => {
   if (event.key === "ArrowRight" || event.key === " ") {
     event.preventDefault();
     state.slideIndex = (state.slideIndex + 1) % state.slides.length;
+    refreshPreview();
   }
 
   if (event.key === "ArrowLeft") {
     event.preventDefault();
     state.slideIndex = (state.slideIndex - 1 + state.slides.length) % state.slides.length;
+    refreshPreview();
+  }
+});
+
+elements.analysis?.addEventListener("click", async () => {
+  elements.analysis.disabled = true;
+  elements.publish.disabled = true;
+
+  try {
+    await analysisSession.analyze();
+    toast("Analysis saved");
+  } catch (error) {
+    console.error(error);
+    toast(errorMessage(error, "Analysis failed"));
+  } finally {
+    elements.analysis.disabled = false;
+    elements.publish.disabled = false;
   }
 });
 
 elements.publish.addEventListener("click", async () => {
   elements.publish.disabled = true;
+  elements.analysis.disabled = true;
 
   try {
-    await saveNow();
+    const saved = await archiveSession.saveNow();
+    if (!saved) throw new Error("Write something before publishing.");
 
-    if (state.text.trim().length >= 80 && !state.machineAnalysis) {
-      await runAutomaticAnalysis(state.revision);
+    if (!state.machineAnalysis) {
+      await analysisSession.analyze();
     }
 
-    await publishCarousel(state);
-    toast("Published");
+    const result = await publishCarousel(state);
+    toast(`Published ${result.images.length} JPGs and ${result.videos.length} MP4s`);
   } catch (error) {
     console.error(error);
-    toast("Publish failed");
+    toast(errorMessage(error, "Publish failed"));
   } finally {
     elements.publish.disabled = false;
+    elements.analysis.disabled = false;
   }
 });
 
@@ -305,13 +270,10 @@ new p5(
       const renderer = sketch.createCanvas(CANVAS.width, CANVAS.height);
       renderer.parent(elements.preview);
       renderer.attribute("aria-hidden", "true");
-
       sketch.pixelDensity(1);
       sketch.frameRate(12);
       sketch.textFont(PRINT_FONT);
-
       state.p5 = sketch;
-
       refreshPreview();
       printFontReady.then(refreshPreview);
     };
@@ -321,28 +283,19 @@ new p5(
       drawSlide(state.slideIndex, state, sketch, sketch.millis() / 1000);
     };
   },
-  elements.preview
+  elements.preview,
 );
 
-restoreRecovery();
+restoreRecovery(state);
+updateEditor();
 
-elements.title.value = state.title;
-elements.text.value = state.text;
-autosizeTitle();
-
-await refreshArchiveIndex();
-refreshPreview();
-
-if ("requestIdleCallback" in window) {
-  requestIdleCallback(
-    () => warmModels(showModelProgress).then(hideModelProgress).catch(hideModelProgress),
-    { timeout: 2500 }
-  );
-} else {
-  setTimeout(
-    () => warmModels(showModelProgress).then(hideModelProgress).catch(hideModelProgress),
-    1200
-  );
+try {
+  await archiveSession.refresh();
+  await archiveSession.reconcileRecovery();
+} catch (error) {
+  console.error(error);
+  toast("Archive unavailable");
 }
 
+refreshPreview();
 elements.text.focus();
