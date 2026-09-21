@@ -20,6 +20,25 @@ import {
   publicationPrefix,
   slugify,
 } from "../server/publication-naming.mjs";
+import { getAnalysisPolicy } from "../dist/studio/analysis-policy.js";
+
+test("analysis policy never treats publishing as an implicit analysis request", () => {
+  assert.deepEqual(getAnalysisPolicy({ machineAnalysis: null }), {
+    hasSavedAnalysis: false,
+    analysisButtonLabel: "ANALYSIS",
+    confirmAnalysisReplacement: false,
+    confirmPublishWithoutAnalysis: true,
+  });
+});
+
+test("analysis policy reuses saved analysis and protects replacement", () => {
+  assert.deepEqual(getAnalysisPolicy({ machineAnalysis: { synthesis: {} } }), {
+    hasSavedAnalysis: true,
+    analysisButtonLabel: "RE-ANALYZE",
+    confirmAnalysisReplacement: true,
+    confirmPublishWithoutAnalysis: false,
+  });
+});
 
 test("thought Markdown round-trips metadata and exact body whitespace", () => {
   const record = {

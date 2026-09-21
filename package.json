@@ -1,6 +1,7 @@
 {
   "name": "generative-thoughts",
   "version": "0.3.0",
+  "type": "module",
   "private": true,
   "description": "A local-first writing archive with generative ASCII publishing.",
   "scripts": {

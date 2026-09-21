@@ -1966,6 +1966,10 @@ function buildSynthesisLines(state, grid) {
 
   const note = finishedNote || streamingNote;
 
+  if (!state.machineAnalysis && !state.aiProgress) {
+    return [];
+  }
+
   const model = shortModelName(
     state.machineAnalysis?.synthesisModel || state.aiProgress?.model || "",
   );

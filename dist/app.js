@@ -15,8 +15,10 @@ import {
 } from "./visuals.js";
 
 import { publishCarousel } from "./export.js";
+import { getAnalysisPolicy } from "./studio/analysis-policy.js";
 import { createAnalysisSession } from "./studio/analysis-session.js";
 import { createArchiveSession } from "./studio/archive-session.js";
+import { createConfirmationDialog } from "./studio/confirmation-dialog.js";
 import {
   NEW_THOUGHT,
   createStudioState,
@@ -32,6 +34,10 @@ const elements = {
   randomVisual: document.querySelector("#randomVisualButton"),
   publish: document.querySelector("#publishButton"),
   analysis: document.querySelector("#analysisButton"),
+  confirmDialog: document.querySelector("#confirmDialog"),
+  confirmTitle: document.querySelector("#confirmDialogTitle"),
+  confirmMessage: document.querySelector("#confirmDialogMessage"),
+  confirmButton: document.querySelector("#confirmDialogProceed"),
   progress: document.querySelector("#modelProgress"),
   progressFill: document.querySelector("#modelProgressFill"),
   toast: document.querySelector("#toast"),
@@ -43,6 +49,13 @@ let archiveThoughts = [];
 let toastTimer;
 let progressFrame;
 let modelProgressValue = 0;
+
+const confirmationDialog = createConfirmationDialog({
+  dialog: elements.confirmDialog,
+  title: elements.confirmTitle,
+  message: elements.confirmMessage,
+  confirmButton: elements.confirmButton,
+});
 
 function errorMessage(error, fallback) {
   const message = String(error?.message || "").trim();
@@ -88,7 +101,13 @@ function hideModelProgress() {
   refreshPreview();
 }
 
+function syncAnalysisControl() {
+  if (!elements.analysis) return;
+  elements.analysis.textContent = getAnalysisPolicy(state).analysisButtonLabel;
+}
+
 function refreshPreview() {
+  syncAnalysisControl();
   if (!state.p5) return;
 
   applyThemeToDocument(state);
@@ -157,6 +176,8 @@ async function switchThought(targetId) {
   if (targetId === (state.id || NEW_THOUGHT)) return;
 
   elements.switcher.disabled = true;
+  elements.publish.disabled = true;
+  elements.analysis.disabled = true;
 
   try {
     await archiveSession.switchTo(targetId);
@@ -166,6 +187,8 @@ async function switchThought(targetId) {
     toast(errorMessage(error, "Could not open that thought"));
   } finally {
     elements.switcher.disabled = false;
+    elements.publish.disabled = false;
+    elements.analysis.disabled = false;
   }
 }
 
@@ -230,6 +253,19 @@ elements.analysis?.addEventListener("click", async () => {
   elements.publish.disabled = true;
 
   try {
+    const policy = getAnalysisPolicy(state);
+
+    if (policy.confirmAnalysisReplacement) {
+      const shouldReplace = await confirmationDialog.confirm({
+        title: "Replace analysis?",
+        message:
+          "This thought already has saved analysis. Re-analyzing will replace it.",
+        confirmLabel: "REPLACE ANALYSIS",
+      });
+
+      if (!shouldReplace) return;
+    }
+
     await analysisSession.analyze();
     toast("Analysis saved");
   } catch (error) {
@@ -249,8 +285,20 @@ elements.publish.addEventListener("click", async () => {
     const saved = await archiveSession.saveNow();
     if (!saved) throw new Error("Write something before publishing.");
 
-    if (!state.machineAnalysis) {
-      await analysisSession.analyze();
+    await archiveSession.reuseStoredAnalysis();
+    refreshPreview();
+
+    const policy = getAnalysisPolicy(state);
+
+    if (policy.confirmPublishWithoutAnalysis) {
+      const shouldPublish = await confirmationDialog.confirm({
+        title: "No analysis yet",
+        message:
+          "You have not analyzed this thought yet. Publish without an AI synthesis page?",
+        confirmLabel: "PUBLISH ANYWAY",
+      });
+
+      if (!shouldPublish) return;
     }
 
     const result = await publishCarousel(state);

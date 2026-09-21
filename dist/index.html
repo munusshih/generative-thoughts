@@ -50,6 +50,18 @@
       <div id="modelProgressFill"></div>
     </div>
 
+    <dialog id="confirmDialog" class="confirm-dialog" aria-labelledby="confirmDialogTitle"
+      aria-describedby="confirmDialogMessage">
+      <form method="dialog">
+        <h2 id="confirmDialogTitle"></h2>
+        <p id="confirmDialogMessage"></p>
+        <div class="confirm-dialog-actions">
+          <button type="submit" value="cancel">CANCEL</button>
+          <button id="confirmDialogProceed" type="submit" value="confirm">PROCEED</button>
+        </div>
+      </form>
+    </dialog>
+
     <div id="toast" class="toast" role="status"></div>
   </main>
 

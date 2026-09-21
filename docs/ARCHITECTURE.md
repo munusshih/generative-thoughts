@@ -11,6 +11,8 @@ dist/app.js                    UI event wiring and p5 lifecycle
 dist/studio/state.js           in-memory state and crash recovery
 dist/studio/archive-session.js serialized autosave and history switching
 dist/studio/analysis-session.js on-demand local-model lifecycle
+dist/studio/analysis-policy.js  explicit reuse, replace, and no-analysis policy
+dist/studio/confirmation-dialog.js accessible destructive-action confirmation
 dist/archive.js                small HTTP client for archive endpoints
 dist/ai.js                     local inference engine and prompt policy
 dist/visuals.js                deterministic carousel rendering engine
@@ -22,6 +24,8 @@ Rules:
 
 - `app.js` wires components; it does not implement storage or inference.
 - Only `analysis-session.js` may trigger the lazy AI import.
+- Publishing never triggers analysis; it reuses saved analysis or asks to proceed without it.
+- Re-analysis always requires confirmation before replacing saved analysis.
 - Archive saves are serialized through one `archive-session` instance.
 - Renderers consume state and normalized media; they do not call external APIs.
 - Export rebuilds slides from saved state instead of trusting preview state.

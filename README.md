@@ -49,7 +49,8 @@ heavy filled geometry.
 Use `RANDOM VISUAL` to generate a new function, palette, parameters, and glyph system
 without changing the writing.
 
-The cover is a static image in both the live preview and the local publication.
+The cover remains static in the live preview. Publishing exports both a cover JPG
+and a typed cover MP4.
 
 ## 3. Duotone theme selection
 Each note now chooses an accessible minimal duotone palette from several soft combinations.
@@ -78,7 +79,9 @@ instead of colder system language.
 Everything else from v7 still holds:
 - localhost:9999
 - auto-save
-- on-demand local analysis (the model loads only after `ANALYSIS` or `PUBLISH`)
+- on-demand local analysis (the model loads only after `ANALYSIS`, never `PUBLISH`)
+- publishing reuses saved analysis, or asks before proceeding without analysis
+- `RE-ANALYZE` asks before replacing an existing analysis
 - editable thought history through the archive selector
 - one type size
 - manual line breaks preserved

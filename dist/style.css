@@ -157,6 +157,58 @@ button {
   transform: translateY(0);
 }
 
+.confirm-dialog {
+  width: min(420px, calc(100% - 32px));
+  border: 1px solid color-mix(in srgb, var(--text) 55%, transparent);
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.confirm-dialog::backdrop {
+  background: color-mix(in srgb, var(--text) 20%, transparent);
+}
+
+.confirm-dialog form {
+  padding: 24px;
+}
+
+.confirm-dialog h2,
+.confirm-dialog p {
+  margin: 0;
+  font: inherit;
+}
+
+.confirm-dialog h2 {
+  margin-bottom: 16px;
+  text-transform: uppercase;
+}
+
+.confirm-dialog p {
+  line-height: 1.55;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 28px;
+}
+
+.confirm-dialog-actions button {
+  border: 1px solid color-mix(in srgb, var(--text) 55%, transparent);
+  background: transparent;
+  padding: 9px 12px;
+  color: inherit;
+  cursor: pointer;
+}
+
+.confirm-dialog-actions button:hover,
+.confirm-dialog-actions button:focus-visible {
+  background: var(--text);
+  color: var(--bg);
+}
+
 @media (max-width: 820px) {
   .workspace {
     width: min(100% - 24px, 680px);

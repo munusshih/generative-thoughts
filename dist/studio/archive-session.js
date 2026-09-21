@@ -114,6 +114,21 @@ export function createArchiveSession({
     }
   }
 
+  async function reuseStoredAnalysis() {
+    if (state.machineAnalysis || !state.id) {
+      return state.machineAnalysis;
+    }
+
+    const stored = await loadThought(state.id);
+
+    if (stored.title !== state.title || stored.text !== state.text) {
+      return null;
+    }
+
+    state.machineAnalysis = stored.machineAnalysis || null;
+    return state.machineAnalysis;
+  }
+
   return {
     get thoughts() {
       return thoughts;
@@ -121,6 +136,7 @@ export function createArchiveSession({
     queueSave,
     reconcileRecovery,
     refresh,
+    reuseStoredAnalysis,
     saveNow,
     switchTo,
   };
