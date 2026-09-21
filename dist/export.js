@@ -454,8 +454,8 @@ async function savePublicationToServer(state, images, videos) {
      01.mp4
 
    human writing pages
-     02.jpg
-     03.jpg
+     02.jpg + 02.mp4
+     03.jpg + 03.mp4
      ...
 
    AI synthesis pages

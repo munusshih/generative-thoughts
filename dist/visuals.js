@@ -2169,9 +2169,9 @@ function drawSynthesisSlide(graphics, slide, state, slideIndex) {
 /* =========================================================
    PUBLISH ANIMATION PLAN
 
-   Only local-model synthesis pages receive typing videos.
+   Every reading page receives a typing video.
 
-   The cover and human writing/body pages remain static JPGs.
+   The cover remains a static JPG.
    ========================================================= */
 
 export function getPublishAnimationPlan(index, state) {
@@ -2195,11 +2195,11 @@ export function getPublishAnimationPlan(index, state) {
     };
   }
 
-  if (slide.type === "synthesis") {
+  if (slide.type === "text" || slide.type === "synthesis") {
     return {
       animate: true,
 
-      type: "synthesis",
+      type: slide.type,
 
       totalCharacters: Math.max(
         1,
