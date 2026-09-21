@@ -1,4 +1,5 @@
 import { AI } from "./config.js";
+import { requireLocalModelId } from "./model-config.js";
 
 /* =========================================================
    TRANSFORMERS.JS
@@ -194,6 +195,8 @@ function shouldForwardLoadProgress(kind, info) {
    ========================================================= */
 
 async function loadLocalPipeline(kind, model, onProgress = () => {}) {
+  const modelId = requireLocalModelId(kind, model);
+
   const { pipeline } = await getTransformers();
 
   const device = requireWebGPU();
@@ -212,7 +215,7 @@ async function loadLocalPipeline(kind, model, onProgress = () => {}) {
   onProgress({
     stage: "loading",
     pipeline: kind,
-    model,
+    model: modelId,
     device,
     dtype,
     local: true,
@@ -220,7 +223,7 @@ async function loadLocalPipeline(kind, model, onProgress = () => {}) {
   });
 
   try {
-    const pipe = await pipeline(kind, model, {
+    const pipe = await pipeline(kind, modelId, {
       device,
       dtype,
 
@@ -234,7 +237,7 @@ async function loadLocalPipeline(kind, model, onProgress = () => {}) {
 
           stage: "loading",
           pipeline: kind,
-          model,
+          model: modelId,
           device,
           dtype,
           local: true,
@@ -244,7 +247,7 @@ async function loadLocalPipeline(kind, model, onProgress = () => {}) {
 
     const slot = runtimeSlot(kind);
 
-    slot.model = model;
+    slot.model = modelId;
     slot.device = device;
     slot.dtype = dtype;
     slot.loadMs = performance.now() - started;
@@ -255,9 +258,9 @@ async function loadLocalPipeline(kind, model, onProgress = () => {}) {
 
     throw new Error(
       [
-        `Could not load local ${kind} model "${model}". `,
+        `Could not load local ${kind} model "${modelId}". `,
         `Make sure its q4f16 files exist under `,
-        `/models/${model}/. `,
+        `/models/${modelId}/. `,
         error?.message || String(error),
       ].join(""),
     );

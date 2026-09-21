@@ -1,4 +1,5 @@
 import plexMonoUrl from "@ibm/plex-mono/fonts/split/woff2/IBMPlexMono-Regular-Latin1.woff2?url";
+import { AI_MODELS } from "./model-config.js";
 
 export const PRINT_FONT = "IBM Plex Mono";
 
@@ -53,10 +54,4 @@ export const TYPE = {
 export const TYPING_PAUSE_MS = 5000;
 export const AUTO_SAVE_MS = 900;
 
-export const AI = {
-  synthesisModel: "",
-
-  embeddingModel: "mixedbread-ai/mxbai-embed-xsmall-v1",
-
-  // keep your other existing config here
-};
+export const AI = AI_MODELS;

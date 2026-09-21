@@ -12,6 +12,10 @@ The command starts the local app and opens <http://localhost:9999> automatically
 If the app is already running, using the command again opens the existing app instead
 of failing with a port-in-use error.
 
+Local AI weights are served from `public/models/`. The synthesis model is Llama 3.2
+3B Instruct and the embedding model is mxbai-embed-xsmall-v1; both run locally through
+Transformers.js and are loaded only after `ANALYSIS` is confirmed.
+
 Project boundaries and local-data rules are documented in
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). The planned image-to-ASCII interlude
 is specified separately in

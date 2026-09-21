@@ -14,6 +14,7 @@ dist/studio/analysis-session.js on-demand local-model lifecycle
 dist/studio/analysis-policy.js  explicit reuse, replace, and no-analysis policy
 dist/studio/confirmation-dialog.js accessible destructive-action confirmation
 dist/archive.js                small HTTP client for archive endpoints
+dist/model-config.js           explicit local model IDs and validation
 dist/ai.js                     local inference engine and prompt policy
 dist/visuals.js                deterministic carousel rendering engine
 dist/visual/image-field.js     provider-agnostic image luminance field

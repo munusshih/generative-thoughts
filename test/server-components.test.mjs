@@ -21,6 +21,25 @@ import {
   slugify,
 } from "../server/publication-naming.mjs";
 import { getAnalysisPolicy } from "../dist/studio/analysis-policy.js";
+import {
+  AI_MODELS,
+  requireLocalModelId,
+} from "../dist/model-config.js";
+
+test("local AI model IDs are explicit and blank IDs are rejected", () => {
+  assert.equal(
+    AI_MODELS.synthesisModel,
+    "onnx-community/Llama-3.2-3B-Instruct-ONNX",
+  );
+  assert.equal(
+    AI_MODELS.embeddingModel,
+    "mixedbread-ai/mxbai-embed-xsmall-v1",
+  );
+  assert.throws(
+    () => requireLocalModelId("text-generation", ""),
+    /No local text-generation model is configured/,
+  );
+});
 
 test("analysis policy never treats publishing as an implicit analysis request", () => {
   assert.deepEqual(getAnalysisPolicy({ machineAnalysis: null }), {

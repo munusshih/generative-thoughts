@@ -38,6 +38,8 @@ const ROOT = path.dirname(__filename);
 
 const DIST = path.join(ROOT, "dist");
 
+const PUBLIC = path.join(ROOT, "public");
+
 const THOUGHTS = path.join(ROOT, "thoughts");
 
 const DATA = path.join(ROOT, "data");
@@ -48,7 +50,12 @@ const INDEX = path.join(DATA, "index.json");
 
 const HOST = "127.0.0.1";
 
-const PORT = 9999;
+const requestedPort = Number.parseInt(process.env.GT_PORT || "", 10);
+
+const PORT =
+  Number.isInteger(requestedPort) && requestedPort > 0 && requestedPort <= 65535
+    ? requestedPort
+    : 9999;
 
 const APP_URL = `http://localhost:${PORT}`;
 
@@ -1400,6 +1407,8 @@ const server = http.createServer(async (req, res) => {
 
 vite = await createViteServer({
   root: DIST,
+
+  publicDir: PUBLIC,
 
   appType: "spa",
 
