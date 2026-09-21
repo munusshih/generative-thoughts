@@ -451,11 +451,11 @@ async function savePublicationToServer(state, images, videos) {
 
    cover
      01.jpg
-     01.mp4
+     01.mp4 (typed cover)
 
    human writing pages
-     02.jpg + 02.mp4
-     03.jpg + 03.mp4
+     02.jpg
+     03.jpg
      ...
 
    AI synthesis pages

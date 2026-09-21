@@ -2169,9 +2169,9 @@ function drawSynthesisSlide(graphics, slide, state, slideIndex) {
 /* =========================================================
    PUBLISH ANIMATION PLAN
 
-   Every reading page receives a typing video.
+   The cover and local-model synthesis pages receive typing videos.
 
-   The cover remains a static JPG.
+   Human writing/body pages remain static JPGs.
    ========================================================= */
 
 export function getPublishAnimationPlan(index, state) {
@@ -2186,20 +2186,28 @@ export function getPublishAnimationPlan(index, state) {
   }
 
   if (slide.type === "cover") {
-    return {
-      animate: false,
+    const number = activeNumber(state);
 
-      type: "cover",
+    const label = number
+      ? `generative thoughts #${pad(number)}`
+      : "generative thoughts";
 
-      totalCharacters: 0,
-    };
-  }
+    const title = String(state.title || "Untitled").trim();
 
-  if (slide.type === "text" || slide.type === "synthesis") {
     return {
       animate: true,
 
-      type: slide.type,
+      type: "cover",
+
+      totalCharacters: Math.max(1, label.length + 1 + title.length),
+    };
+  }
+
+  if (slide.type === "synthesis") {
+    return {
+      animate: true,
+
+      type: "synthesis",
 
       totalCharacters: Math.max(
         1,

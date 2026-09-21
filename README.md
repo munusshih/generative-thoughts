@@ -82,4 +82,4 @@ Everything else from v7 still holds:
 - editable thought history through the archive selector
 - one type size
 - manual line breaks preserved
-- publish a static cover JPG, JPG + MP4 reading pages, Markdown, and local-model traces through one button
+- publish a typed cover MP4, static writing-page JPGs, synthesis-page MP4s, Markdown, and local-model traces through one button
