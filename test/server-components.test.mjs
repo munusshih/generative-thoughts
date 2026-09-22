@@ -124,23 +124,28 @@ test("cover visual reveal begins with the title and completes with it", () => {
   );
 });
 
-test("cover visual cell staggering is stable and spatially varied", () => {
-  const input = {
-    x: 0.2,
-    y: -0.35,
-    row: 8,
-    col: 14,
-    seed: 12345,
-    phase: 0.7,
-  };
-  const first = coverVisualCellThreshold(input);
-  const repeated = coverVisualCellThreshold(input);
-  const neighbor = coverVisualCellThreshold({ ...input, col: 15 });
+test("cover visual types left-to-right and line-by-line", () => {
+  const first = coverVisualCellThreshold({ row: 0, col: 0, rows: 3, cols: 4 });
+  const nextCharacter = coverVisualCellThreshold({
+    row: 0,
+    col: 1,
+    rows: 3,
+    cols: 4,
+  });
+  const nextLine = coverVisualCellThreshold({
+    row: 1,
+    col: 0,
+    rows: 3,
+    cols: 4,
+  });
+  const last = coverVisualCellThreshold({ row: 2, col: 3, rows: 3, cols: 4 });
 
-  assert.equal(first, repeated);
-  assert.notEqual(first, neighbor);
-  assert.ok(first >= 0 && first <= 1);
-  assert.ok(neighbor >= 0 && neighbor <= 1);
+  assert.equal(first, 1 / 12);
+  assert.equal(nextCharacter, 2 / 12);
+  assert.equal(nextLine, 5 / 12);
+  assert.equal(last, 1);
+  assert.ok(first < nextCharacter);
+  assert.ok(nextCharacter < nextLine);
 });
 
 test("legacy published synthesis is recovered only for matching source text", () => {

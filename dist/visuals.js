@@ -1591,19 +1591,11 @@ function writeVisual(buffer, grid, state, slideIndex = 0) {
           }
 
           if (revealProgress < 1) {
-            const local = rotate(
-              (nx - system.placement.x) / system.placement.sx,
-              (ny - system.placement.y) / system.placement.sy,
-              system.placement.rotation,
-            );
-
             const revealThreshold = coverVisualCellThreshold({
-              x: local.x,
-              y: local.y,
               row,
               col,
-              seed: state.visualSeed,
-              phase: system.math.phase,
+              rows: grid.rows,
+              cols: grid.cols,
             });
 
             if (revealProgress < revealThreshold) {
