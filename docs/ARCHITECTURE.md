@@ -37,6 +37,7 @@ Rules:
 local-server.mjs                 HTTP/Vite orchestration and route handlers
 server/archive-format.mjs        thought Markdown codec
 server/atomic-files.mjs          recoverable whole-file writes
+server/legacy-analysis.mjs       source-matched published-analysis recovery
 server/publication-naming.mjs    stable publication paths and page names
 ```
 

@@ -27,6 +27,8 @@ import {
   writeJSONAtomic,
   writeTextAtomic,
 } from "./server/atomic-files.mjs";
+import { recoverPublishedAnalysis } from "./server/legacy-analysis.mjs";
+import { AI_MODELS } from "./dist/model-config.js";
 
 /* =========================================================
    PATHS
@@ -393,6 +395,48 @@ async function scan() {
    GET ONE THOUGHT
    ========================================================= */
 
+async function recoverAnalysisFromPublication(thought) {
+  const prefix = publicationPrefix(thought.index);
+  const entries = await fs.readdir(PUBLISHED, { withFileTypes: true });
+  const publicationDirectories = entries
+    .filter((entry) => entry.isDirectory() && entry.name.startsWith(prefix))
+    .map((entry) => entry.name)
+    .sort()
+    .reverse();
+
+  for (const directory of publicationDirectories) {
+    const publicationFile = path.join(PUBLISHED, directory, "index.md");
+
+    try {
+      const markdown = await fs.readFile(publicationFile, "utf8");
+      const recovered = recoverPublishedAnalysis(markdown, thought);
+
+      if (!recovered) continue;
+
+      return {
+        index: thought.index,
+        title: thought.title,
+        updatedAt: thought.updatedAt,
+        sourceUpdatedAt: thought.updatedAt,
+        embeddingModel: null,
+        synthesisModel: AI_MODELS.synthesisModel,
+        embedding: [],
+        synthesis: {
+          reflection: recovered.reflection,
+        },
+        trace: null,
+        modelProvenance: null,
+        nearest: [],
+        recoveredFrom: path.relative(ROOT, publicationFile),
+      };
+    } catch (error) {
+      if (error?.code !== "ENOENT") throw error;
+    }
+  }
+
+  return null;
+}
+
 async function getThought(id) {
   const entries = await scan();
 
@@ -422,14 +466,24 @@ async function getThought(id) {
     {},
   );
 
-  return {
+  const thought = {
     ...item,
 
     title: meta.title || item.title,
 
     text,
+  };
 
-    machineAnalysis: index[item.id] || null,
+  const storedAnalysis = index[item.id] || null;
+
+  const recoveredAnalysis = storedAnalysis
+    ? null
+    : await recoverAnalysisFromPublication(thought);
+
+  return {
+    ...thought,
+
+    machineAnalysis: storedAnalysis || recoveredAnalysis,
   };
 }
 

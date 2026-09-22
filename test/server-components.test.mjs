@@ -25,6 +25,72 @@ import {
   AI_MODELS,
   requireLocalModelId,
 } from "../dist/model-config.js";
+import { recoverPublishedAnalysis } from "../server/legacy-analysis.mjs";
+
+test("legacy published synthesis is recovered only for matching source text", () => {
+  const markdown = [
+    "---",
+    'title: "A thought"',
+    "---",
+    "",
+    "# A thought",
+    "",
+    "first line",
+    "",
+    "second line",
+    "",
+    "---",
+    "",
+    "## Afterthought",
+    "",
+    "A saved local-model reflection.",
+  ].join("\n");
+
+  assert.deepEqual(
+    recoverPublishedAnalysis(markdown, {
+      title: "A thought",
+      text: "first line\n\nsecond line",
+    }),
+    {
+      reflection: "A saved local-model reflection.",
+      sourceHeading: "Afterthought",
+    },
+  );
+
+  assert.equal(
+    recoverPublishedAnalysis(markdown, {
+      title: "A thought",
+      text: "edited text",
+    }),
+    null,
+  );
+});
+
+test("current published synthesis recovery excludes the trace section", () => {
+  const markdown = [
+    "# A thought",
+    "",
+    "source",
+    "",
+    "## Local model note",
+    "",
+    "Recovered reflection.",
+    "",
+    "## Local model trace",
+    "",
+    "```json",
+    "{}",
+    "```",
+  ].join("\n");
+
+  assert.equal(
+    recoverPublishedAnalysis(markdown, {
+      title: "A thought",
+      text: "source",
+    })?.reflection,
+    "Recovered reflection.",
+  );
+});
 
 test("local AI model IDs are explicit and blank IDs are rejected", () => {
   assert.equal(
