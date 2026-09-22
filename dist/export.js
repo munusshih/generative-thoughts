@@ -1,6 +1,10 @@
 import { CANVAS } from "./config.js";
 
 import { pad } from "./helpers.js";
+import {
+  publishImagePercent,
+  publishVideoPercent,
+} from "./publish-progress.js";
 
 import { buildSlides, drawSlide, getPublishAnimationPlan } from "./visuals.js";
 import { publicationVideoTiming } from "./video-timing.js";
@@ -136,18 +140,26 @@ function snapshotCanvas(canvas) {
   return snapshot;
 }
 
-async function holdRenderedFrame(durationMs, canvas, snapshot, emitFrame) {
+async function holdRenderedFrame(
+  durationMs,
+  canvas,
+  snapshot,
+  emitFrame,
+  onProgress = () => {},
+) {
   const context = canvas.getContext("2d");
   const startedAt = performance.now();
 
   while (performance.now() - startedAt < durationMs) {
     context.drawImage(snapshot, 0, 0);
     emitFrame();
+    onProgress(clamp((performance.now() - startedAt) / durationMs, 0, 1));
     await nextFrame();
   }
 
   context.drawImage(snapshot, 0, 0);
   emitFrame();
+  onProgress(1);
 }
 
 /* =========================================================
@@ -178,7 +190,13 @@ function preferredVideoMimeType() {
    RECORD ONE TYPING VIDEO
    ========================================================= */
 
-async function recordTypingVideo(state, index, graphics, animationPlan) {
+async function recordTypingVideo(
+  state,
+  index,
+  graphics,
+  animationPlan,
+  onProgress = () => {},
+) {
   if (typeof MediaRecorder === "undefined") {
     throw new Error("This browser does not support MediaRecorder.");
   }
@@ -195,6 +213,16 @@ async function recordTypingVideo(state, index, graphics, animationPlan) {
     type: animationPlan.type,
     totalCharacters,
   });
+  let lastProgressPercent = -1;
+
+  const reportProgress = (elapsedMs, phase) => {
+    const progress = clamp(elapsedMs / timing.totalMs, 0, 1);
+    const percent = Math.floor(progress * 100);
+
+    if (percent <= lastProgressPercent && progress < 1) return;
+    lastProgressPercent = percent;
+    onProgress({ progress, phase });
+  };
 
   const stream = canvas.captureStream(VIDEO_FPS);
   const videoTrack = stream.getVideoTracks()[0] || null;
@@ -268,6 +296,9 @@ async function recordTypingVideo(state, index, graphics, animationPlan) {
       canvas,
       emptyFrame,
       emitFrame,
+      (progress) => {
+        reportProgress(progress * timing.startHoldMs, "starting");
+      },
     );
 
     const startedAt = performance.now();
@@ -293,6 +324,7 @@ async function recordTypingVideo(state, index, graphics, animationPlan) {
 
       drawSlide(index, state, graphics);
       emitFrame();
+      reportProgress(timing.startHoldMs + elapsed, "typing");
 
       if (progress >= 1) {
         break;
@@ -316,6 +348,12 @@ async function recordTypingVideo(state, index, graphics, animationPlan) {
       canvas,
       completedFrame,
       emitFrame,
+      (progress) => {
+        reportProgress(
+          timing.startHoldMs + timing.typingMs + progress * timing.endHoldMs,
+          "holding",
+        );
+      },
     );
 
     recorder.stop();
@@ -476,7 +514,7 @@ async function savePublicationToServer(state, images, videos) {
      ...
    ========================================================= */
 
-export async function publishCarousel(state) {
+export async function publishCarousel(state, onProgress = () => {}) {
   if (!state?.p5) {
     throw new Error("Canvas is not ready for publishing.");
   }
@@ -484,6 +522,7 @@ export async function publishCarousel(state) {
   const graphics = state.p5.createGraphics(CANVAS.width, CANVAS.height);
 
   graphics.pixelDensity(1);
+  onProgress({ label: "PREPARING PUBLICATION", percent: 2 });
 
   /*
     VERY IMPORTANT:
@@ -507,29 +546,52 @@ export async function publishCarousel(state) {
   const images = [];
 
   const videos = [];
+  const videoPlans = state.slides
+    .map((slide, index) => ({
+      index,
+      plan: getPublishAnimationPlan(index, state),
+    }))
+    .filter(({ plan }) => plan.animate);
 
   try {
     for (let index = 0; index < state.slides.length; index += 1) {
+      onProgress({
+        label: `RENDERING JPG ${index + 1} OF ${state.slides.length}`,
+        percent: publishImagePercent(index, state.slides.length),
+      });
       const blob = await renderImage(state, index, graphics);
 
       images.push({
         page: index + 1,
         data: await blobToDataURL(blob),
       });
+
+      onProgress({
+        label: `RENDERING JPG ${index + 1} OF ${state.slides.length}`,
+        percent: publishImagePercent(index + 1, state.slides.length),
+      });
     }
 
-    for (let index = 0; index < state.slides.length; index += 1) {
-      const plan = getPublishAnimationPlan(index, state);
-
-      if (!plan.animate) {
-        continue;
-      }
-
+    for (let videoIndex = 0; videoIndex < videoPlans.length; videoIndex += 1) {
+      const { index, plan } = videoPlans[videoIndex];
       const blob = await recordTypingVideo(
         state,
         index,
         graphics,
         plan,
+        ({ progress, phase }) => {
+          onProgress({
+            label:
+              phase === "holding"
+                ? `FINAL HOLD · MP4 ${videoIndex + 1} OF ${videoPlans.length}`
+                : `RENDERING MP4 ${videoIndex + 1} OF ${videoPlans.length}`,
+            percent: publishVideoPercent(
+              videoIndex,
+              progress,
+              videoPlans.length,
+            ),
+          });
+        },
       );
 
       videos.push({
@@ -538,7 +600,10 @@ export async function publishCarousel(state) {
       });
     }
 
-    return await savePublicationToServer(state, images, videos);
+    onProgress({ label: "CONVERTING & SAVING FILES", percent: 92 });
+    const result = await savePublicationToServer(state, images, videos);
+    onProgress({ label: "PUBLICATION COMPLETE", percent: 100 });
+    return result;
   } finally {
     clearPublishReveal(state);
     graphics.remove();

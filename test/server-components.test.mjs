@@ -40,6 +40,10 @@ import {
 } from "../dist/visual/cover-reveal.js";
 import { publicationVideoTiming } from "../dist/video-timing.js";
 import {
+  publishImagePercent,
+  publishVideoPercent,
+} from "../dist/publish-progress.js";
+import {
   createServerConnection,
   createServerUnavailableError,
   isServerUnavailable,
@@ -164,6 +168,14 @@ test("synthesis videos hold the ending for five seconds within 20 seconds", () =
   assert.ok(short.totalMs <= 20_000);
   assert.ok(long.totalMs <= 20_000);
   assert.equal(long.totalMs, 19_600);
+});
+
+test("publish progress advances across image and video rendering", () => {
+  assert.equal(publishImagePercent(0, 4), 5);
+  assert.equal(publishImagePercent(4, 4), 35);
+  assert.equal(publishVideoPercent(0, 0, 2), 35);
+  assert.equal(publishVideoPercent(0, 1, 2), 60);
+  assert.equal(publishVideoPercent(1, 1, 2), 85);
 });
 
 test("legacy published synthesis is recovered only for matching source text", () => {

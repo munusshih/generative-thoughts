@@ -85,6 +85,25 @@ function toast(message, { persistent = false } = {}) {
   }
 }
 
+function showProgressPanel({ label, percent }) {
+  const safePercent = Math.max(0, Math.min(100, Math.round(percent || 0)));
+  elements.progress.classList.add("is-active");
+  elements.progress.setAttribute("aria-hidden", "false");
+  elements.progress.setAttribute("aria-valuenow", String(safePercent));
+  elements.progressFill.style.width = `${safePercent}%`;
+  elements.progressLabel.textContent = label;
+  elements.progressPercent.textContent = `${safePercent}%`;
+}
+
+function hideProgressPanel() {
+  elements.progressFill.style.width = "0%";
+  elements.progressLabel.textContent = "PREPARING";
+  elements.progressPercent.textContent = "0%";
+  elements.progress.setAttribute("aria-valuenow", "0");
+  elements.progress.setAttribute("aria-hidden", "true");
+  elements.progress.classList.remove("is-active");
+}
+
 function handleAppError(error, fallback) {
   if (serverConnection?.report(error)) return;
   console.error(error);
@@ -94,12 +113,7 @@ function handleAppError(error, fallback) {
 function showModelProgress(progress) {
   state.aiProgress = progress || null;
   modelProgress = analysisProgressView(progress, modelProgress);
-  elements.progress.classList.add("is-active");
-  elements.progress.setAttribute("aria-hidden", "false");
-  elements.progress.setAttribute("aria-valuenow", String(modelProgress.percent));
-  elements.progressFill.style.width = `${modelProgress.percent}%`;
-  elements.progressLabel.textContent = modelProgress.label;
-  elements.progressPercent.textContent = `${modelProgress.percent}%`;
+  showProgressPanel(modelProgress);
 
   if (!progressFrame) {
     progressFrame = requestAnimationFrame(() => {
@@ -112,12 +126,7 @@ function showModelProgress(progress) {
 function hideModelProgress() {
   state.aiProgress = null;
   modelProgress = initialAnalysisProgress();
-  elements.progressFill.style.width = "0%";
-  elements.progressLabel.textContent = modelProgress.label;
-  elements.progressPercent.textContent = "0%";
-  elements.progress.setAttribute("aria-valuenow", "0");
-  elements.progress.setAttribute("aria-hidden", "true");
-  elements.progress.classList.remove("is-active");
+  hideProgressPanel();
   refreshPreview();
 }
 
@@ -316,6 +325,7 @@ elements.analysis?.addEventListener("click", async () => {
 elements.publish.addEventListener("click", async () => {
   elements.publish.disabled = true;
   elements.analysis.disabled = true;
+  showProgressPanel({ label: "SAVING WRITING", percent: 1 });
 
   try {
     const saved = await archiveSession.saveNow();
@@ -337,11 +347,12 @@ elements.publish.addEventListener("click", async () => {
       if (!shouldPublish) return;
     }
 
-    const result = await publishCarousel(state);
+    const result = await publishCarousel(state, showProgressPanel);
     toast(`Published ${result.images.length} JPGs and ${result.videos.length} MP4s`);
   } catch (error) {
     handleAppError(error, "Publish failed");
   } finally {
+    hideProgressPanel();
     elements.publish.disabled = false;
     elements.analysis.disabled = false;
   }
