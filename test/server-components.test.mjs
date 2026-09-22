@@ -26,6 +26,10 @@ import {
 } from "../server/publication-naming.mjs";
 import { getAnalysisPolicy } from "../dist/studio/analysis-policy.js";
 import {
+  analysisProgressView,
+  initialAnalysisProgress,
+} from "../dist/studio/analysis-progress.js";
+import {
   AI_MODELS,
   requireLocalModelId,
 } from "../dist/model-config.js";
@@ -234,6 +238,43 @@ test("analysis policy reuses saved analysis and protects replacement", () => {
     analysisButtonLabel: "RE-ANALYZE",
     confirmAnalysisReplacement: true,
     confirmPublishWithoutAnalysis: false,
+  });
+});
+
+test("analysis progress is labeled and never moves backward", () => {
+  let view = initialAnalysisProgress();
+  view = analysisProgressView({ stage: "saving-draft" }, view);
+  assert.deepEqual(view, { label: "SAVING WRITING", percent: 3, rank: 1 });
+
+  view = analysisProgressView(
+    { stage: "loading", pipeline: "text-generation", progress: 50 },
+    view,
+  );
+  assert.deepEqual(view, {
+    label: "LOADING SYNTHESIS MODEL",
+    percent: 28,
+    rank: 3,
+  });
+
+  view = analysisProgressView({ stage: "generating", percent: 50 }, view);
+  assert.deepEqual(view, {
+    label: "WRITING SYNTHESIS",
+    percent: 71,
+    rank: 4,
+  });
+
+  view = analysisProgressView(
+    { stage: "loading", pipeline: "feature-extraction", progress: 100 },
+    view,
+  );
+  assert.equal(view.label, "WRITING SYNTHESIS");
+  assert.equal(view.percent, 71);
+
+  view = analysisProgressView({ stage: "saved" }, view);
+  assert.deepEqual(view, {
+    label: "ANALYSIS COMPLETE",
+    percent: 100,
+    rank: 7,
   });
 });
 

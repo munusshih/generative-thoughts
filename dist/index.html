@@ -48,8 +48,15 @@
 
     </section>
 
-    <div id="modelProgress" class="model-progress" aria-hidden="true">
-      <div id="modelProgressFill"></div>
+    <div id="modelProgress" class="model-progress" role="progressbar" aria-label="Analysis progress"
+      aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-hidden="true">
+      <div class="model-progress-meta" aria-live="polite">
+        <span id="modelProgressLabel">PREPARING ANALYSIS</span>
+        <span id="modelProgressPercent">0%</span>
+      </div>
+      <div class="model-progress-track">
+        <div id="modelProgressFill"></div>
+      </div>
     </div>
 
     <dialog id="confirmDialog" class="confirm-dialog" aria-labelledby="confirmDialogTitle"

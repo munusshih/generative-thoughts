@@ -120,24 +120,44 @@ button {
 
 .model-progress {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 2px;
+  right: 24px;
+  bottom: 78px;
+  width: min(430px, calc(100% - 48px));
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--text) 55%, transparent);
+  background: var(--bg);
   opacity: 0;
-  transition: opacity 160ms ease;
+  transform: translateY(6px);
+  transition: opacity 160ms ease, transform 160ms ease;
   pointer-events: none;
+  z-index: 10;
 }
 
 .model-progress.is-active {
   opacity: 1;
+  transform: translateY(0);
 }
 
-.model-progress>div {
+.model-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 9px;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+}
+
+.model-progress-track {
+  height: 5px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--text) 14%, transparent);
+}
+
+.model-progress-track>div {
   width: 0%;
   height: 100%;
   background: var(--text);
-  transition: width 120ms linear;
+  transition: width 220ms ease-out;
 }
 
 .toast {
@@ -223,6 +243,12 @@ button {
   .actions {
     right: 12px;
     bottom: 12px;
+  }
+
+  .model-progress {
+    right: 12px;
+    bottom: 64px;
+    width: calc(100% - 24px);
   }
 }
 

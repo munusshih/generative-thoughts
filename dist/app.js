@@ -18,6 +18,10 @@ import { publishCarousel } from "./export.js";
 import { checkServer } from "./archive.js";
 import { getAnalysisPolicy } from "./studio/analysis-policy.js";
 import { createAnalysisSession } from "./studio/analysis-session.js";
+import {
+  analysisProgressView,
+  initialAnalysisProgress,
+} from "./studio/analysis-progress.js";
 import { createArchiveSession } from "./studio/archive-session.js";
 import { createConfirmationDialog } from "./studio/confirmation-dialog.js";
 import {
@@ -45,6 +49,8 @@ const elements = {
   confirmButton: document.querySelector("#confirmDialogProceed"),
   progress: document.querySelector("#modelProgress"),
   progressFill: document.querySelector("#modelProgressFill"),
+  progressLabel: document.querySelector("#modelProgressLabel"),
+  progressPercent: document.querySelector("#modelProgressPercent"),
   toast: document.querySelector("#toast"),
 };
 
@@ -53,7 +59,7 @@ const state = createStudioState();
 let archiveThoughts = [];
 let toastTimer;
 let progressFrame;
-let modelProgressValue = 0;
+let modelProgress = initialAnalysisProgress();
 let serverConnection;
 
 const confirmationDialog = createConfirmationDialog({
@@ -87,19 +93,13 @@ function handleAppError(error, fallback) {
 
 function showModelProgress(progress) {
   state.aiProgress = progress || null;
+  modelProgress = analysisProgressView(progress, modelProgress);
   elements.progress.classList.add("is-active");
-
-  const reported = Number.isFinite(progress?.percent)
-    ? progress.percent
-    : progress?.progress;
-
-  if (Number.isFinite(reported)) {
-    modelProgressValue = Math.max(modelProgressValue, reported);
-  } else {
-    modelProgressValue = Math.max(modelProgressValue, 2);
-  }
-
-  elements.progressFill.style.width = `${Math.min(100, modelProgressValue)}%`;
+  elements.progress.setAttribute("aria-hidden", "false");
+  elements.progress.setAttribute("aria-valuenow", String(modelProgress.percent));
+  elements.progressFill.style.width = `${modelProgress.percent}%`;
+  elements.progressLabel.textContent = modelProgress.label;
+  elements.progressPercent.textContent = `${modelProgress.percent}%`;
 
   if (!progressFrame) {
     progressFrame = requestAnimationFrame(() => {
@@ -111,8 +111,12 @@ function showModelProgress(progress) {
 
 function hideModelProgress() {
   state.aiProgress = null;
-  modelProgressValue = 0;
+  modelProgress = initialAnalysisProgress();
   elements.progressFill.style.width = "0%";
+  elements.progressLabel.textContent = modelProgress.label;
+  elements.progressPercent.textContent = "0%";
+  elements.progress.setAttribute("aria-valuenow", "0");
+  elements.progress.setAttribute("aria-hidden", "true");
   elements.progress.classList.remove("is-active");
   refreshPreview();
 }
