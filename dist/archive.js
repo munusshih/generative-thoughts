@@ -1,35 +1,60 @@
+import { createServerUnavailableError } from "./studio/server-connection.js";
+
+async function request(url, options) {
+  try {
+    return await fetch(url, options);
+  } catch (error) {
+    throw createServerUnavailableError(error);
+  }
+}
+
+async function responseJSON(response, fallback) {
+  let data = null;
+
+  try {
+    data = await response.json();
+  } catch {
+    if (response.ok) throw new Error(fallback);
+  }
+
+  if (!response.ok) {
+    throw new Error(data?.message || data?.error || fallback);
+  }
+
+  return data;
+}
+
+export async function checkServer() {
+  const response = await request("/api/health", { cache: "no-store" });
+  return responseJSON(response, "Local server unavailable");
+}
+
 export async function listThoughts() {
-  const response = await fetch("/api/thoughts", { cache: "no-store" });
-  if (!response.ok) throw new Error("Archive unavailable");
-  return response.json();
+  const response = await request("/api/thoughts", { cache: "no-store" });
+  return responseJSON(response, "Archive unavailable");
 }
 
 export async function loadThought(id) {
-  const response = await fetch(`/api/thoughts/${encodeURIComponent(id)}`, {
+  const response = await request(`/api/thoughts/${encodeURIComponent(id)}`, {
     cache: "no-store",
   });
-  if (!response.ok) throw new Error("Thought unavailable");
-  return response.json();
+  return responseJSON(response, "Thought unavailable");
 }
 
 export async function saveThought(payload) {
-  const response = await fetch("/api/thoughts/save", {
+  const response = await request("/api/thoughts/save", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.message || data.error || "Save failed");
-  return data;
+  return responseJSON(response, "Save failed");
 }
 
 export async function saveAnalysis(payload) {
-  const response = await fetch("/api/analysis/save", {
+  const response = await request("/api/analysis/save", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.message || data.error || "Analysis save failed");
-  return data;
+  return responseJSON(response, "Analysis save failed");
 }

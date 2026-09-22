@@ -15,10 +15,15 @@ import {
 } from "./visuals.js";
 
 import { publishCarousel } from "./export.js";
+import { checkServer } from "./archive.js";
 import { getAnalysisPolicy } from "./studio/analysis-policy.js";
 import { createAnalysisSession } from "./studio/analysis-session.js";
 import { createArchiveSession } from "./studio/archive-session.js";
 import { createConfirmationDialog } from "./studio/confirmation-dialog.js";
+import {
+  createServerConnection,
+  isServerUnavailable,
+} from "./studio/server-connection.js";
 import {
   NEW_THOUGHT,
   createStudioState,
@@ -49,6 +54,7 @@ let archiveThoughts = [];
 let toastTimer;
 let progressFrame;
 let modelProgressValue = 0;
+let serverConnection;
 
 const confirmationDialog = createConfirmationDialog({
   dialog: elements.confirmDialog,
@@ -62,11 +68,21 @@ function errorMessage(error, fallback) {
   return message && message.length <= 120 ? message : fallback;
 }
 
-function toast(message) {
+function toast(message, { persistent = false } = {}) {
   elements.toast.textContent = message;
   elements.toast.classList.add("is-visible");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => elements.toast.classList.remove("is-visible"), 2600);
+  toastTimer = null;
+
+  if (!persistent) {
+    toastTimer = setTimeout(() => elements.toast.classList.remove("is-visible"), 2600);
+  }
+}
+
+function handleAppError(error, fallback) {
+  if (serverConnection?.report(error)) return;
+  console.error(error);
+  toast(errorMessage(error, fallback));
 }
 
 function showModelProgress(progress) {
@@ -159,8 +175,26 @@ const archiveSession = createArchiveSession({
     refreshPreview();
   },
   onError(error, fallback) {
-    console.error(error);
-    toast(errorMessage(error, fallback));
+    handleAppError(error, fallback);
+  },
+});
+
+serverConnection = createServerConnection({
+  probe: checkServer,
+  onDisconnected() {
+    toast(
+      "Local server disconnected. Reopen start.command; reconnecting automatically.",
+      { persistent: true },
+    );
+  },
+  async onReconnected() {
+    await archiveSession.refresh();
+    await archiveSession.reconcileRecovery();
+    await archiveSession.saveNow();
+    toast("Local server reconnected. Archive restored.");
+  },
+  onRecoveryError(error) {
+    if (!isServerUnavailable(error)) console.error(error);
   },
 });
 
@@ -182,9 +216,8 @@ async function switchThought(targetId) {
   try {
     await archiveSession.switchTo(targetId);
   } catch (error) {
-    console.error(error);
     renderThoughtSwitcher();
-    toast(errorMessage(error, "Could not open that thought"));
+    handleAppError(error, "Could not open that thought");
   } finally {
     elements.switcher.disabled = false;
     elements.publish.disabled = false;
@@ -269,8 +302,7 @@ elements.analysis?.addEventListener("click", async () => {
     await analysisSession.analyze();
     toast("Analysis saved");
   } catch (error) {
-    console.error(error);
-    toast(errorMessage(error, "Analysis failed"));
+    handleAppError(error, "Analysis failed");
   } finally {
     elements.analysis.disabled = false;
     elements.publish.disabled = false;
@@ -304,8 +336,7 @@ elements.publish.addEventListener("click", async () => {
     const result = await publishCarousel(state);
     toast(`Published ${result.images.length} JPGs and ${result.videos.length} MP4s`);
   } catch (error) {
-    console.error(error);
-    toast(errorMessage(error, "Publish failed"));
+    handleAppError(error, "Publish failed");
   } finally {
     elements.publish.disabled = false;
     elements.analysis.disabled = false;
@@ -341,8 +372,7 @@ try {
   await archiveSession.refresh();
   await archiveSession.reconcileRecovery();
 } catch (error) {
-  console.error(error);
-  toast("Archive unavailable");
+  handleAppError(error, "Archive unavailable");
 }
 
 refreshPreview();

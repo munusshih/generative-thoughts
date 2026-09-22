@@ -982,6 +982,11 @@ async function deleteThought(id) {
    ========================================================= */
 
 async function handleAPI(req, res, url) {
+  if (req.method === "GET" && url.pathname === "/api/health") {
+    sendJSON(res, 200, { ok: true });
+    return true;
+  }
+
   /* ---------------------------------------------------------
      LIST THOUGHTS
      --------------------------------------------------------- */

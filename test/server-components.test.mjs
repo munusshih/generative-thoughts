@@ -30,6 +30,40 @@ import {
   coverVisualCellThreshold,
   coverVisualRevealProgress,
 } from "../dist/visual/cover-reveal.js";
+import {
+  createServerConnection,
+  createServerUnavailableError,
+  isServerUnavailable,
+} from "../dist/studio/server-connection.js";
+
+test("server connection reports once and recovers through its scheduled probe", async () => {
+  const scheduled = [];
+  const events = [];
+  const connection = createServerConnection({
+    probe: async () => events.push("probe"),
+    onDisconnected: () => events.push("disconnected"),
+    onReconnected: async () => events.push("reconnected"),
+    setTimeoutFn(callback) {
+      scheduled.push(callback);
+      return scheduled.length;
+    },
+    clearTimeoutFn() {},
+  });
+
+  const unavailable = createServerUnavailableError(new TypeError("Failed to fetch"));
+  assert.equal(isServerUnavailable(unavailable), true);
+  assert.equal(connection.report(unavailable), true);
+  assert.equal(connection.report(unavailable), true);
+  assert.equal(connection.report(new Error("ordinary failure")), false);
+  assert.equal(connection.disconnected, true);
+  assert.deepEqual(events, ["disconnected"]);
+  assert.equal(scheduled.length, 1);
+
+  await scheduled[0]();
+
+  assert.equal(connection.disconnected, false);
+  assert.deepEqual(events, ["disconnected", "probe", "reconnected"]);
+});
 
 test("cover visual reveal begins with the title and completes with it", () => {
   assert.equal(
