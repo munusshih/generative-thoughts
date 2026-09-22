@@ -15,6 +15,10 @@ import {
   writeTextAtomic,
 } from "../server/atomic-files.mjs";
 import {
+  openSystemTarget,
+  systemOpenCommand,
+} from "../server/system-open.mjs";
+import {
   pageName,
   publicationDirectoryName,
   publicationPrefix,
@@ -63,6 +67,30 @@ test("server connection reports once and recovers through its scheduled probe", 
 
   assert.equal(connection.disconnected, false);
   assert.deepEqual(events, ["disconnected", "probe", "reconnected"]);
+});
+
+test("successful publication folders use the native system opener", () => {
+  assert.deepEqual(systemOpenCommand("/tmp/published", "darwin"), {
+    command: "open",
+    args: ["/tmp/published"],
+  });
+  assert.deepEqual(systemOpenCommand("C:\\published", "win32"), {
+    command: "cmd",
+    args: ["/c", "start", "", "C:\\published"],
+  });
+
+  const launches = [];
+  openSystemTarget("/tmp/published", {
+    platform: "darwin",
+    launch(command, args, callback) {
+      launches.push({ command, args });
+      callback(null);
+    },
+  });
+
+  assert.deepEqual(launches, [
+    { command: "open", args: ["/tmp/published"] },
+  ]);
 });
 
 test("cover visual reveal begins with the title and completes with it", () => {

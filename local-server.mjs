@@ -28,6 +28,7 @@ import {
   writeTextAtomic,
 } from "./server/atomic-files.mjs";
 import { recoverPublishedAnalysis } from "./server/legacy-analysis.mjs";
+import { openSystemTarget } from "./server/system-open.mjs";
 import { AI_MODELS } from "./dist/model-config.js";
 
 /* =========================================================
@@ -225,44 +226,17 @@ async function convertToMP4(inputFile, outputFile) {
    ========================================================= */
 
 function openBrowser(url) {
-  if (process.env.GT_NO_OPEN === "1") {
-    return;
-  }
+  openSystemTarget(url, {
+    disabled: process.env.GT_NO_OPEN === "1",
+    description: "browser",
+  });
+}
 
-  const launcher =
-    process.platform === "darwin"
-      ? {
-          command: "open",
-
-          args: [url],
-        }
-      : process.platform === "win32"
-        ? {
-            command: "cmd",
-
-            args: ["/c", "start", "", url],
-          }
-        : {
-            command: "xdg-open",
-
-            args: [url],
-          };
-
-  execFile(
-    launcher.command,
-
-    launcher.args,
-
-    (error) => {
-      if (error) {
-        console.warn(
-          `Could not open the browser automatically: ${error.message}`,
-        );
-
-        console.warn(`Open ${url} manually.`);
-      }
-    },
-  );
+function openPublicationFolder(directory) {
+  openSystemTarget(directory, {
+    disabled: process.env.GT_NO_OPEN === "1",
+    description: "published folder",
+  });
 }
 
 /* =========================================================
@@ -1364,6 +1338,8 @@ async function handleAPI(req, res, url) {
 
         result,
       );
+
+      openPublicationFolder(path.join(PUBLISHED, result.directory));
     } catch (error) {
       console.error(
         "Publish failed:",
