@@ -3,6 +3,7 @@ import { CANVAS } from "./config.js";
 import { pad } from "./helpers.js";
 
 import { buildSlides, drawSlide, getPublishAnimationPlan } from "./visuals.js";
+import { publicationVideoTiming } from "./video-timing.js";
 
 /* =========================================================
    EXPORT SETTINGS
@@ -13,16 +14,6 @@ const IMAGE_QUALITY = 0.96;
 const VIDEO_FPS = 30;
 
 const VIDEO_BITRATE = 6_000_000;
-
-const CHARACTERS_PER_SECOND = 34;
-
-const MIN_TYPING_SECONDS = 2.5;
-
-const MAX_TYPING_SECONDS = 20;
-
-const START_HOLD_MS = 350;
-
-const END_HOLD_MS = 800;
 
 /* =========================================================
    STATE
@@ -42,12 +33,6 @@ function activeId(state) {
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
 }
 
 function nextFrame() {
@@ -143,18 +128,26 @@ function clearPublishReveal(state) {
   delete state.__publishReveal;
 }
 
-/* =========================================================
-   VIDEO LENGTH
-   ========================================================= */
+function snapshotCanvas(canvas) {
+  const snapshot = document.createElement("canvas");
+  snapshot.width = canvas.width;
+  snapshot.height = canvas.height;
+  snapshot.getContext("2d").drawImage(canvas, 0, 0);
+  return snapshot;
+}
 
-function typingDurationSeconds(totalCharacters) {
-  return clamp(
-    totalCharacters / CHARACTERS_PER_SECOND,
+async function holdRenderedFrame(durationMs, canvas, snapshot, emitFrame) {
+  const context = canvas.getContext("2d");
+  const startedAt = performance.now();
 
-    MIN_TYPING_SECONDS,
+  while (performance.now() - startedAt < durationMs) {
+    context.drawImage(snapshot, 0, 0);
+    emitFrame();
+    await nextFrame();
+  }
 
-    MAX_TYPING_SECONDS,
-  );
+  context.drawImage(snapshot, 0, 0);
+  emitFrame();
 }
 
 /* =========================================================
@@ -185,7 +178,7 @@ function preferredVideoMimeType() {
    RECORD ONE TYPING VIDEO
    ========================================================= */
 
-async function recordTypingVideo(state, index, graphics, totalCharacters) {
+async function recordTypingVideo(state, index, graphics, animationPlan) {
   if (typeof MediaRecorder === "undefined") {
     throw new Error("This browser does not support MediaRecorder.");
   }
@@ -197,8 +190,15 @@ async function recordTypingVideo(state, index, graphics, totalCharacters) {
   }
 
   const mimeType = preferredVideoMimeType();
+  const totalCharacters = animationPlan.totalCharacters;
+  const timing = publicationVideoTiming({
+    type: animationPlan.type,
+    totalCharacters,
+  });
 
   const stream = canvas.captureStream(VIDEO_FPS);
+  const videoTrack = stream.getVideoTracks()[0] || null;
+  const emitFrame = () => videoTrack?.requestFrame?.();
 
   const options = {
     videoBitsPerSecond: VIDEO_BITRATE,
@@ -254,6 +254,7 @@ async function recordTypingVideo(state, index, graphics, totalCharacters) {
   setPublishReveal(state, index, 0, totalCharacters);
 
   drawSlide(index, state, graphics);
+  const emptyFrame = snapshotCanvas(canvas);
 
   recorder.start(250);
 
@@ -262,9 +263,12 @@ async function recordTypingVideo(state, index, graphics, totalCharacters) {
       Brief stillness before typing begins.
     */
 
-    await sleep(START_HOLD_MS);
-
-    const durationMs = typingDurationSeconds(totalCharacters) * 1000;
+    await holdRenderedFrame(
+      timing.startHoldMs,
+      canvas,
+      emptyFrame,
+      emitFrame,
+    );
 
     const startedAt = performance.now();
 
@@ -272,7 +276,7 @@ async function recordTypingVideo(state, index, graphics, totalCharacters) {
       const elapsed = performance.now() - startedAt;
 
       const progress = clamp(
-        elapsed / durationMs,
+        elapsed / timing.typingMs,
 
         0,
 
@@ -288,6 +292,7 @@ async function recordTypingVideo(state, index, graphics, totalCharacters) {
       setPublishReveal(state, index, visibleCharacters, totalCharacters);
 
       drawSlide(index, state, graphics);
+      emitFrame();
 
       if (progress >= 1) {
         break;
@@ -301,10 +306,17 @@ async function recordTypingVideo(state, index, graphics, totalCharacters) {
     */
 
     setPublishReveal(state, index, totalCharacters, totalCharacters);
-
     drawSlide(index, state, graphics);
+    emitFrame();
 
-    await sleep(END_HOLD_MS);
+    const completedFrame = snapshotCanvas(canvas);
+
+    await holdRenderedFrame(
+      timing.endHoldMs,
+      canvas,
+      completedFrame,
+      emitFrame,
+    );
 
     recorder.stop();
 
@@ -517,7 +529,7 @@ export async function publishCarousel(state) {
         state,
         index,
         graphics,
-        plan.totalCharacters,
+        plan,
       );
 
       videos.push({

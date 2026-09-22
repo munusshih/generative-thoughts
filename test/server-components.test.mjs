@@ -38,6 +38,7 @@ import {
   coverVisualCellThreshold,
   coverVisualRevealProgress,
 } from "../dist/visual/cover-reveal.js";
+import { publicationVideoTiming } from "../dist/video-timing.js";
 import {
   createServerConnection,
   createServerUnavailableError,
@@ -146,6 +147,23 @@ test("cover visual types left-to-right and line-by-line", () => {
   assert.equal(last, 1);
   assert.ok(first < nextCharacter);
   assert.ok(nextCharacter < nextLine);
+});
+
+test("synthesis videos hold the ending for five seconds within 20 seconds", () => {
+  const short = publicationVideoTiming({
+    type: "synthesis",
+    totalCharacters: 40,
+  });
+  const long = publicationVideoTiming({
+    type: "synthesis",
+    totalCharacters: 100_000,
+  });
+
+  assert.equal(short.endHoldMs, 5000);
+  assert.equal(long.endHoldMs, 5000);
+  assert.ok(short.totalMs <= 20_000);
+  assert.ok(long.totalMs <= 20_000);
+  assert.equal(long.totalMs, 19_600);
 });
 
 test("legacy published synthesis is recovered only for matching source text", () => {
