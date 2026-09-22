@@ -17,6 +17,7 @@ dist/archive.js                small HTTP client for archive endpoints
 dist/model-config.js           explicit local model IDs and validation
 dist/ai.js                     local inference engine and prompt policy
 dist/visuals.js                deterministic carousel rendering engine
+dist/visual/cover-reveal.js    deterministic cover-video stagger schedule
 dist/visual/image-field.js     provider-agnostic image luminance field
 dist/export.js                 JPG/WebM capture and publish request
 ```

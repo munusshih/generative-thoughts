@@ -54,7 +54,8 @@ Use `RANDOM VISUAL` to generate a new function, palette, parameters, and glyph s
 without changing the writing.
 
 The cover remains static in the live preview. Publishing exports both a cover JPG
-and a typed cover MP4.
+and a typed cover MP4. In the MP4, visual glyphs stagger into place while the title
+is being typed.
 
 ## 3. Duotone theme selection
 Each note now chooses an accessible minimal duotone palette from several soft combinations.

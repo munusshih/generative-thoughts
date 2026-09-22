@@ -26,6 +26,56 @@ import {
   requireLocalModelId,
 } from "../dist/model-config.js";
 import { recoverPublishedAnalysis } from "../server/legacy-analysis.mjs";
+import {
+  coverVisualCellThreshold,
+  coverVisualRevealProgress,
+} from "../dist/visual/cover-reveal.js";
+
+test("cover visual reveal begins with the title and completes with it", () => {
+  assert.equal(
+    coverVisualRevealProgress({
+      visibleCharacters: 19,
+      labelLength: 19,
+      titleLength: 20,
+    }),
+    0,
+  );
+  assert.equal(
+    coverVisualRevealProgress({
+      visibleCharacters: 30,
+      labelLength: 19,
+      titleLength: 20,
+    }),
+    0.5,
+  );
+  assert.equal(
+    coverVisualRevealProgress({
+      visibleCharacters: 40,
+      labelLength: 19,
+      titleLength: 20,
+    }),
+    1,
+  );
+});
+
+test("cover visual cell staggering is stable and spatially varied", () => {
+  const input = {
+    x: 0.2,
+    y: -0.35,
+    row: 8,
+    col: 14,
+    seed: 12345,
+    phase: 0.7,
+  };
+  const first = coverVisualCellThreshold(input);
+  const repeated = coverVisualCellThreshold(input);
+  const neighbor = coverVisualCellThreshold({ ...input, col: 15 });
+
+  assert.equal(first, repeated);
+  assert.notEqual(first, neighbor);
+  assert.ok(first >= 0 && first <= 1);
+  assert.ok(neighbor >= 0 && neighbor <= 1);
+});
 
 test("legacy published synthesis is recovered only for matching source text", () => {
   const markdown = [

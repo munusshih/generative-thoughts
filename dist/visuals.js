@@ -2,6 +2,10 @@ import { LAYOUT, PRINT_FONT, TYPE } from "./config.js";
 
 import { analyzeText, clamp, lerp, pad, stringSeed } from "./helpers.js";
 import { evaluateImageField, getShapeImage } from "./visual/image-field.js";
+import {
+  coverVisualCellThreshold,
+  coverVisualRevealProgress,
+} from "./visual/cover-reveal.js";
 
 const TAU = Math.PI * 2;
 
@@ -1538,8 +1542,21 @@ function glyphFromValue(system, value) {
    WRITE VISUAL
    ========================================================= */
 
-function writeVisual(buffer, grid, state) {
+function writeVisual(buffer, grid, state, slideIndex = 0) {
   const system = getVisualSystem(state);
+  const reveal = publishRevealForSlide(state, slideIndex);
+  const title = String(state.title || "Untitled").trim();
+  const number = activeNumber(state);
+  const label = number
+    ? `generative thoughts #${pad(number)}`
+    : "generative thoughts";
+  const revealProgress = reveal
+    ? coverVisualRevealProgress({
+        visibleCharacters: reveal.visibleCharacters,
+        labelLength: label.length,
+        titleLength: title.length,
+      })
+    : 1;
 
   for (let row = 0; row < grid.rows; row += 1) {
     for (let col = 0; col < grid.cols; col += 1) {
@@ -1568,6 +1585,33 @@ function writeVisual(buffer, grid, state) {
       const glyph = glyphFromValue(system, value);
 
       if (glyph !== null) {
+        if (reveal) {
+          if (revealProgress <= 0) {
+            continue;
+          }
+
+          if (revealProgress < 1) {
+            const local = rotate(
+              (nx - system.placement.x) / system.placement.sx,
+              (ny - system.placement.y) / system.placement.sy,
+              system.placement.rotation,
+            );
+
+            const revealThreshold = coverVisualCellThreshold({
+              x: local.x,
+              y: local.y,
+              row,
+              col,
+              seed: state.visualSeed,
+              phase: system.math.phase,
+            });
+
+            if (revealProgress < revealThreshold) {
+              continue;
+            }
+          }
+        }
+
         setCell(buffer, row, col, glyph, "art");
       }
     }
@@ -1764,7 +1808,7 @@ function drawCover(graphics, state, slideIndex = 0) {
 
   const buffer = createCoverBuffer(grid);
 
-  writeVisual(buffer, grid, state);
+  writeVisual(buffer, grid, state, slideIndex);
 
   writeCoverText(buffer, grid, state, slideIndex);
 
