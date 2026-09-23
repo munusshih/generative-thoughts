@@ -527,9 +527,12 @@ async function savePublicationToServer(state, images, videos) {
      03.jpg
      ...
 
-   AI synthesis pages
+   generated image interlude
      04.jpg + 04.mp4
+
+   AI synthesis pages
      05.jpg + 05.mp4
+     06.jpg + 06.mp4
      ...
    ========================================================= */
 

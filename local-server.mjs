@@ -1207,6 +1207,61 @@ async function handleAPI(req, res, url) {
   }
 
   /* ---------------------------------------------------------
+     SAVE AN IMAGE WITHOUT REPLACING THE AI ANALYSIS
+     --------------------------------------------------------- */
+
+  if (req.method === "POST" && url.pathname === "/api/analysis/image") {
+    const body = await readBody(req);
+    const thought = body.id ? await getThought(body.id) : null;
+
+    if (!thought) {
+      sendJSON(res, 404, { error: "NOT_FOUND" });
+      return true;
+    }
+
+    if (body.sourceUpdatedAt && body.sourceUpdatedAt !== thought.updatedAt) {
+      sendJSON(res, 409, {
+        error: "STALE_ANALYSIS",
+        message: "The writing changed before this image could be saved.",
+      });
+      return true;
+    }
+
+    const imageInterlude = normalizeImageInterlude(body.imageInterlude);
+
+    if (!imageInterlude) {
+      sendJSON(res, 400, {
+        error: "INVALID_IMAGE_INTERLUDE",
+        message: "The generated image data is incomplete.",
+      });
+      return true;
+    }
+
+    const data = await readJSON(INDEX, {});
+    const analysis = data[body.id] || null;
+
+    if (!analysis) {
+      sendJSON(res, 409, {
+        error: "ANALYSIS_REQUIRED",
+        message: "Run analysis before generating an image.",
+      });
+      return true;
+    }
+
+    const record = {
+      ...analysis,
+      updatedAt: thought.updatedAt,
+      sourceUpdatedAt: thought.updatedAt,
+      imageInterlude,
+    };
+
+    data[body.id] = record;
+    await writeJSONAtomic(INDEX, data);
+    sendJSON(res, 200, record);
+    return true;
+  }
+
+  /* ---------------------------------------------------------
      SAVE ANALYSIS
      --------------------------------------------------------- */
 

@@ -16,7 +16,10 @@ import {
 
 import { publishCarousel } from "./export.js";
 import { checkServer } from "./archive.js";
-import { getAnalysisPolicy } from "./studio/analysis-policy.js";
+import {
+  getAnalysisPolicy,
+  getImagePolicy,
+} from "./studio/analysis-policy.js";
 import { createAnalysisSession } from "./studio/analysis-session.js";
 import {
   analysisProgressView,
@@ -24,6 +27,7 @@ import {
 } from "./studio/analysis-progress.js";
 import { createArchiveSession } from "./studio/archive-session.js";
 import { createConfirmationDialog } from "./studio/confirmation-dialog.js";
+import { createImageSession } from "./studio/image-session.js";
 import {
   createServerConnection,
   isServerUnavailable,
@@ -43,6 +47,7 @@ const elements = {
   randomVisual: document.querySelector("#randomVisualButton"),
   publish: document.querySelector("#publishButton"),
   analysis: document.querySelector("#analysisButton"),
+  image: document.querySelector("#imageButton"),
   confirmDialog: document.querySelector("#confirmDialog"),
   confirmTitle: document.querySelector("#confirmDialogTitle"),
   confirmMessage: document.querySelector("#confirmDialogMessage"),
@@ -130,13 +135,18 @@ function hideModelProgress() {
   refreshPreview();
 }
 
-function syncAnalysisControl() {
-  if (!elements.analysis) return;
-  elements.analysis.textContent = getAnalysisPolicy(state).analysisButtonLabel;
+function syncActionControls() {
+  if (elements.analysis) {
+    elements.analysis.textContent = getAnalysisPolicy(state).analysisButtonLabel;
+  }
+
+  if (elements.image) {
+    elements.image.textContent = getImagePolicy(state).imageButtonLabel;
+  }
 }
 
 function refreshPreview() {
-  syncAnalysisControl();
+  syncActionControls();
   if (!state.p5) return;
 
   applyThemeToDocument(state);
@@ -219,12 +229,22 @@ const analysisSession = createAnalysisSession({
   refreshPreview,
 });
 
+const imageSession = createImageSession({
+  state,
+  saveNow: () => archiveSession.saveNow(),
+  reuseStoredAnalysis: () => archiveSession.reuseStoredAnalysis(),
+  showProgress: showProgressPanel,
+  hideProgress: hideProgressPanel,
+  refreshPreview,
+});
+
 async function switchThought(targetId) {
   if (targetId === (state.id || NEW_THOUGHT)) return;
 
   elements.switcher.disabled = true;
   elements.publish.disabled = true;
   elements.analysis.disabled = true;
+  elements.image.disabled = true;
 
   try {
     await archiveSession.switchTo(targetId);
@@ -235,6 +255,7 @@ async function switchThought(targetId) {
     elements.switcher.disabled = false;
     elements.publish.disabled = false;
     elements.analysis.disabled = false;
+    elements.image.disabled = false;
   }
 }
 
@@ -296,6 +317,7 @@ elements.preview.addEventListener("keydown", (event) => {
 
 elements.analysis?.addEventListener("click", async () => {
   elements.analysis.disabled = true;
+  elements.image.disabled = true;
   elements.publish.disabled = true;
 
   try {
@@ -318,6 +340,41 @@ elements.analysis?.addEventListener("click", async () => {
     handleAppError(error, "Analysis failed");
   } finally {
     elements.analysis.disabled = false;
+    elements.image.disabled = false;
+    elements.publish.disabled = false;
+  }
+});
+
+elements.image?.addEventListener("click", async () => {
+  elements.image.disabled = true;
+  elements.analysis.disabled = true;
+  elements.publish.disabled = true;
+
+  try {
+    const policy = getImagePolicy(state);
+
+    if (!policy.hasSavedAnalysis) {
+      throw new Error("Run analysis before generating an image.");
+    }
+
+    if (policy.confirmImageReplacement) {
+      const shouldReplace = await confirmationDialog.confirm({
+        title: "Replace image?",
+        message:
+          "This thought already has a saved source image. Generating again will replace it.",
+        confirmLabel: "REPLACE IMAGE",
+      });
+
+      if (!shouldReplace) return;
+    }
+
+    await imageSession.generate();
+    toast("Image saved");
+  } catch (error) {
+    handleAppError(error, "Image generation failed");
+  } finally {
+    elements.image.disabled = false;
+    elements.analysis.disabled = false;
     elements.publish.disabled = false;
   }
 });
@@ -325,6 +382,7 @@ elements.analysis?.addEventListener("click", async () => {
 elements.publish.addEventListener("click", async () => {
   elements.publish.disabled = true;
   elements.analysis.disabled = true;
+  elements.image.disabled = true;
   showProgressPanel({ label: "SAVING WRITING", percent: 1 });
 
   try {
@@ -355,6 +413,7 @@ elements.publish.addEventListener("click", async () => {
     hideProgressPanel();
     elements.publish.disabled = false;
     elements.analysis.disabled = false;
+    elements.image.disabled = false;
   }
 });
 

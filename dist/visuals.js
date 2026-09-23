@@ -13,6 +13,14 @@ import {
 
 const TAU = Math.PI * 2;
 
+const IMAGE_INTERLUDE_MAX_WIDTH_RATIO = 0.62;
+
+const IMAGE_INTERLUDE_MAX_HEIGHT_RATIO = 0.7;
+
+const IMAGE_INTERLUDE_FONT_SIZE = 15;
+
+const IMAGE_INTERLUDE_GLYPHS = [".", ":", "*", "o", "O", "0", "8", "#"];
+
 /* =========================================================
    PAGE
    ========================================================= */
@@ -1815,42 +1823,90 @@ function drawCover(graphics, state, slideIndex = 0) {
    IMAGE INTERLUDE
    ========================================================= */
 
-function writeImageInterlude(buffer, grid, interlude, state) {
-  const system = getVisualSystem(state);
+function getImageInterludeGrid(graphics, interlude) {
+  const sourceWidth = Math.max(1, Number(interlude?.raster?.width) || 1);
+  const sourceHeight = Math.max(1, Number(interlude?.raster?.height) || 1);
+  const sourceAspect = sourceWidth / sourceHeight;
+  const fontSize = IMAGE_INTERLUDE_FONT_SIZE;
+
+  const cellWidth = fontSize * 0.6;
+  const cellHeight = fontSize * 1.08;
+  const maxWidth = graphics.width * IMAGE_INTERLUDE_MAX_WIDTH_RATIO;
+  const maxHeight = graphics.height * IMAGE_INTERLUDE_MAX_HEIGHT_RATIO;
+  let width = Math.min(maxWidth, maxHeight * sourceAspect);
+  let height = width / sourceAspect;
+
+  if (height > maxHeight) {
+    height = maxHeight;
+    width = height * sourceAspect;
+  }
+
+  const cols = Math.max(1, Math.floor(width / cellWidth));
+  const rows = Math.max(1, Math.floor(height / cellHeight));
+  const renderedWidth = cols * cellWidth;
+  const renderedHeight = rows * cellHeight;
+
+  return {
+    left: (graphics.width - renderedWidth) / 2,
+    top: (graphics.height - renderedHeight) / 2,
+    cols,
+    rows,
+    cellWidth,
+    cellHeight,
+    fontSize,
+    width: renderedWidth,
+    height: renderedHeight,
+  };
+}
+
+function imageInterludeGlyph(tone) {
+  const normalized = clamp((tone - 0.025) / 0.975, 0, 1);
+  const shaped = Math.pow(normalized, 0.82);
+  const index = clamp(
+    Math.floor(shaped * IMAGE_INTERLUDE_GLYPHS.length),
+    0,
+    IMAGE_INTERLUDE_GLYPHS.length - 1,
+  );
+
+  return normalized < 0.035 ? null : IMAGE_INTERLUDE_GLYPHS[index];
+}
+
+function writeImageInterlude(buffer, grid, interlude, state, slideIndex) {
+  const reveal = publishRevealForSlide(state, slideIndex);
+  const revealProgress = reveal?.progress ?? 1;
 
   for (let row = 0; row < grid.rows; row += 1) {
     for (let col = 0; col < grid.cols; col += 1) {
+      const revealThreshold = coverVisualCellThreshold({
+        row,
+        col,
+        rows: grid.rows,
+        cols: grid.cols,
+      });
+
+      if (revealProgress < revealThreshold) continue;
+
       const u = col / Math.max(1, grid.cols - 1);
       const v = row / Math.max(1, grid.rows - 1);
       const tone = sampleInterludeTone(interlude, u, v);
-      const stripeGate = row % 2 === 0 ? 0.02 : -0.035;
-      const glyph = glyphFromValue(system, clamp(tone + stripeGate, 0, 1));
+      const stripeGate = row % 2 === 0 ? 0.018 : -0.012;
+      const glyph = imageInterludeGlyph(clamp(tone + stripeGate, 0, 1));
 
-      if (glyph !== null) setCell(buffer, row, col, glyph, "art");
+      setCell(
+        buffer,
+        row,
+        col,
+        glyph || (row % 2 === 0 ? "_" : " "),
+        glyph ? "art" : "blank",
+      );
     }
   }
-
-  const query = String(interlude.query || interlude.keywords?.[0] || "image");
-  const title = String(interlude.objectTitle || "Untitled");
-  const artist = String(interlude.artist || interlude.culture || "Unknown maker");
-  const date = String(interlude.date || "");
-  const footer = [artist, date].filter(Boolean).join(" / ");
-
-  writeString(buffer, 0, 0, `image synthesis / ${query}`.slice(0, grid.cols));
-  writeString(buffer, grid.rows - 3, 0, title.slice(0, grid.cols));
-  writeString(buffer, grid.rows - 2, 0, footer.slice(0, grid.cols));
-  writeString(
-    buffer,
-    grid.rows - 1,
-    0,
-    `the met / open access / ${interlude.objectId || ""}`.slice(0, grid.cols),
-  );
 }
 
-function drawImageInterlude(graphics, slide, state) {
-  const grid = getGrid(graphics);
-  const buffer = createCoverBuffer(grid);
-  writeImageInterlude(buffer, grid, slide.imageInterlude, state);
+function drawImageInterlude(graphics, slide, state, slideIndex) {
+  const grid = getImageInterludeGrid(graphics, slide.imageInterlude);
+  const buffer = createBuffer(grid, " ", "blank");
+  writeImageInterlude(buffer, grid, slide.imageInterlude, state, slideIndex);
   renderBuffer(graphics, grid, buffer, getThemeForState(state));
 }
 
@@ -2309,6 +2365,22 @@ export function getPublishAnimationPlan(index, state) {
     };
   }
 
+  if (slide.type === "image-interlude") {
+    const raster = slide.imageInterlude?.raster || {};
+
+    return {
+      animate: true,
+
+      type: "image-interlude",
+
+      totalCharacters: Math.max(
+        1,
+
+        Number(raster.width || 0) * Number(raster.height || 0),
+      ),
+    };
+  }
+
   return {
     animate: false,
 
@@ -2352,7 +2424,7 @@ export function drawSlide(index, state, graphics = state.p5) {
   }
 
   if (slide.type === "image-interlude") {
-    drawImageInterlude(graphics, slide, state);
+    drawImageInterlude(graphics, slide, state, index);
     return;
   }
 

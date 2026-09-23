@@ -67,3 +67,12 @@ export async function findImageInterlude(payload) {
   });
   return responseJSON(response, "Image synthesis failed");
 }
+
+export async function saveAnalysisImage(payload) {
+  const response = await request("/api/analysis/image", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return responseJSON(response, "Image save failed");
+}

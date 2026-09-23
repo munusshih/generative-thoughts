@@ -1,6 +1,6 @@
 const STOP_WORDS = new Set(
   `
-  about after again against almost also among another any are because been before
+  about after again against almost also among and another any are because been before
   being between both but can could did does doing each even every few for from had
   has have having here how into its itself just many may might more most much must
   never not now only other our out over own same should since some still such than

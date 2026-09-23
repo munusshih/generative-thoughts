@@ -24,7 +24,10 @@ import {
   publicationPrefix,
   slugify,
 } from "../server/publication-naming.mjs";
-import { getAnalysisPolicy } from "../dist/studio/analysis-policy.js";
+import {
+  getAnalysisPolicy,
+  getImagePolicy,
+} from "../dist/studio/analysis-policy.js";
 import {
   analysisProgressView,
   initialAnalysisProgress,
@@ -174,6 +177,16 @@ test("synthesis videos hold the ending for five seconds within 20 seconds", () =
   assert.ok(short.totalMs <= 20_000);
   assert.ok(long.totalMs <= 20_000);
   assert.equal(long.totalMs, 19_600);
+});
+
+test("image interlude animation stays within the publication duration cap", () => {
+  const timing = publicationVideoTiming({
+    type: "image-interlude",
+    totalCharacters: 72 * 90,
+  });
+
+  assert.ok(timing.totalMs <= 20_000);
+  assert.equal(timing.totalMs, 19_600);
 });
 
 test("publish progress advances across image and video rendering", () => {
@@ -369,6 +382,31 @@ test("analysis policy reuses saved analysis and protects replacement", () => {
   });
 });
 
+test("image generation is separate from analysis and protects replacement", () => {
+  assert.deepEqual(getImagePolicy({ machineAnalysis: null }), {
+    hasSavedAnalysis: false,
+    hasSavedImage: false,
+    imageButtonLabel: "GENERATE IMAGE",
+    confirmImageReplacement: false,
+  });
+
+  assert.deepEqual(getImagePolicy({ machineAnalysis: { synthesis: {} } }), {
+    hasSavedAnalysis: true,
+    hasSavedImage: false,
+    imageButtonLabel: "GENERATE IMAGE",
+    confirmImageReplacement: false,
+  });
+
+  assert.deepEqual(getImagePolicy({
+    machineAnalysis: { synthesis: {}, imageInterlude: { objectId: 42 } },
+  }), {
+    hasSavedAnalysis: true,
+    hasSavedImage: true,
+    imageButtonLabel: "REGENERATE IMAGE",
+    confirmImageReplacement: true,
+  });
+});
+
 test("analysis progress is labeled and never moves backward", () => {
   let view = initialAnalysisProgress();
   view = analysisProgressView({ stage: "saving-draft" }, view);
@@ -398,18 +436,11 @@ test("analysis progress is labeled and never moves backward", () => {
   assert.equal(view.label, "WRITING SYNTHESIS");
   assert.equal(view.percent, 71);
 
-  view = analysisProgressView({ stage: "finding-image" }, view);
-  assert.deepEqual(view, {
-    label: "FINDING SOURCE IMAGE",
-    percent: 96,
-    rank: 6,
-  });
-
   view = analysisProgressView({ stage: "saved" }, view);
   assert.deepEqual(view, {
     label: "ANALYSIS COMPLETE",
     percent: 100,
-    rank: 8,
+    rank: 7,
   });
 });
 

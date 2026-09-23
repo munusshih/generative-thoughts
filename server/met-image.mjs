@@ -150,6 +150,7 @@ async function rasterizeImage(fetchFn, imageURL) {
       position: "attention",
     })
     .grayscale()
+    .normalize({ lower: 1, upper: 99 })
     .raw()
     .toBuffer({ resolveWithObject: true });
 
