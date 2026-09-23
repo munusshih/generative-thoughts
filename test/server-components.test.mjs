@@ -27,6 +27,7 @@ import {
 import {
   getAnalysisPolicy,
   getImagePolicy,
+  getPublishPolicy,
 } from "../dist/studio/analysis-policy.js";
 import {
   analysisProgressView,
@@ -369,16 +370,47 @@ test("analysis policy never treats publishing as an implicit analysis request", 
     hasSavedAnalysis: false,
     analysisButtonLabel: "ANALYSIS",
     confirmAnalysisReplacement: false,
-    confirmPublishWithoutAnalysis: true,
   });
 });
 
 test("analysis policy reuses saved analysis and protects replacement", () => {
-  assert.deepEqual(getAnalysisPolicy({ machineAnalysis: { synthesis: {} } }), {
+  assert.deepEqual(getAnalysisPolicy({
+    machineAnalysis: { synthesis: { reflection: "Saved" } },
+  }), {
     hasSavedAnalysis: true,
     analysisButtonLabel: "RE-ANALYZE",
     confirmAnalysisReplacement: true,
-    confirmPublishWithoutAnalysis: false,
+  });
+});
+
+test("publish reminder checks for both analysis and generated image", () => {
+  const neither = getPublishPolicy({ machineAnalysis: null });
+  assert.equal(neither.confirmPublish, true);
+  assert.equal(neither.confirmation.title, "Analysis and image missing");
+
+  const analysisOnly = getPublishPolicy({
+    machineAnalysis: { synthesis: { reflection: "Saved" } },
+  });
+  assert.equal(analysisOnly.confirmPublish, true);
+  assert.equal(analysisOnly.confirmation.title, "No image yet");
+
+  const imageOnly = getPublishPolicy({
+    machineAnalysis: { imageInterlude: { objectId: 42 } },
+  });
+  assert.equal(imageOnly.confirmPublish, true);
+  assert.equal(imageOnly.confirmation.title, "No analysis yet");
+
+  const complete = getPublishPolicy({
+    machineAnalysis: {
+      synthesis: { reflection: "Saved" },
+      imageInterlude: { objectId: 42 },
+    },
+  });
+  assert.deepEqual(complete, {
+    hasSavedAnalysis: true,
+    hasSavedImage: true,
+    confirmPublish: false,
+    confirmation: null,
   });
 });
 

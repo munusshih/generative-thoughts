@@ -19,6 +19,7 @@ import { checkServer } from "./archive.js";
 import {
   getAnalysisPolicy,
   getImagePolicy,
+  getPublishPolicy,
 } from "./studio/analysis-policy.js";
 import { createAnalysisSession } from "./studio/analysis-session.js";
 import {
@@ -392,15 +393,12 @@ elements.publish.addEventListener("click", async () => {
     await archiveSession.reuseStoredAnalysis();
     refreshPreview();
 
-    const policy = getAnalysisPolicy(state);
+    const policy = getPublishPolicy(state);
 
-    if (policy.confirmPublishWithoutAnalysis) {
-      const shouldPublish = await confirmationDialog.confirm({
-        title: "No analysis yet",
-        message:
-          "You have not analyzed this thought yet. Publish without an AI synthesis page?",
-        confirmLabel: "PUBLISH ANYWAY",
-      });
+    if (policy.confirmPublish) {
+      const shouldPublish = await confirmationDialog.confirm(
+        policy.confirmation,
+      );
 
       if (!shouldPublish) return;
     }
