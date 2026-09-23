@@ -39,11 +39,15 @@ import {
 } from "../dist/model-config.js";
 import { recoverPublishedAnalysis } from "../server/legacy-analysis.mjs";
 import { deriveImageSearch } from "../server/image-keywords.mjs";
-import { normalizeImageInterlude } from "../server/met-image.mjs";
+import {
+  normalizeImageInterlude,
+  rankMetObjects,
+} from "../server/met-image.mjs";
 import {
   hasInterludeRaster,
   sampleInterludeTone,
 } from "../dist/visual/interlude-raster.js";
+import { interludeTextCell } from "../dist/visual/interlude-tone.js";
 import {
   coverVisualCellThreshold,
   coverVisualRevealProgress,
@@ -317,6 +321,40 @@ test("image search favors title and repeated source terms over AI wording", () =
   assert.equal(search.queries[0], "orbit");
 });
 
+test("Met image ranking is relevant and contains no seeded variation", () => {
+  const objects = [
+    {
+      objectID: 1,
+      title: "Unrelated vessel",
+      objectName: "Vessel",
+      isHighlight: true,
+    },
+    {
+      objectID: 2,
+      title: "Antenna Garden",
+      objectName: "Print",
+      tags: [{ term: "rooftop garden" }],
+      isHighlight: false,
+    },
+    {
+      objectID: 3,
+      title: "Garden Scene",
+      objectName: "Painting",
+      isHighlight: true,
+    },
+  ];
+  const options = {
+    query: "antenna garden",
+    keywords: ["antenna", "garden", "rooftop"],
+  };
+
+  assert.deepEqual(
+    rankMetObjects(objects, options).map((object) => object.objectID),
+    [2, 3, 1],
+  );
+  assert.deepEqual(rankMetObjects(objects, options), rankMetObjects(objects, options));
+});
+
 test("image interlude normalization requires a complete public-domain raster", () => {
   const encoded = Buffer.from([0, 64, 128, 255]).toString("base64");
   const normalized = normalizeImageInterlude({
@@ -348,6 +386,20 @@ test("image interlude raster sampler preserves light and dark structure", () => 
   assert.equal(hasInterludeRaster(interlude), true);
   assert.ok(sampleInterludeTone(interlude, 0, 0) > 0.85);
   assert.ok(sampleInterludeTone(interlude, 1, 1) < 0.3);
+});
+
+test("image tones use deterministic opaque grayscale text only", () => {
+  const light = interludeTextCell(0.15);
+  const middle = interludeTextCell(0.5);
+  const dark = interludeTextCell(0.95);
+
+  assert.deepEqual(middle, interludeTextCell(0.5));
+  assert.equal(interludeTextCell(0), null);
+  assert.match(light.color, /^#[0-9a-f]{6}$/i);
+  assert.match(middle.color, /^#[0-9a-f]{6}$/i);
+  assert.match(dark.color, /^#[0-9a-f]{6}$/i);
+  assert.equal(new Set([light.color, middle.color, dark.color]).size, 3);
+  assert.ok(![light.glyph, middle.glyph, dark.glyph].includes("_"));
 });
 
 test("local AI model IDs are explicit and blank IDs are rejected", () => {

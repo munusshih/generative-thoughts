@@ -10,17 +10,6 @@ const DOWNLOAD_LIMIT_BYTES = 12 * 1024 * 1024;
 const RASTER_WIDTH = 72;
 const RASTER_HEIGHT = 90;
 
-function hashString(value) {
-  let hash = 2166136261;
-
-  for (const character of String(value || "")) {
-    hash ^= character.codePointAt(0);
-    hash = Math.imul(hash, 16777619);
-  }
-
-  return hash >>> 0;
-}
-
 async function fetchWithTimeout(fetchFn, url, options = {}, timeoutMs = 8000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -45,13 +34,6 @@ async function fetchJSON(fetchFn, url) {
   return response.json();
 }
 
-function rotateSelection(values, seed, count) {
-  if (!values.length) return [];
-  const start = seed % values.length;
-  const rotated = values.slice(start).concat(values.slice(0, start));
-  return rotated.slice(0, count);
-}
-
 function objectSearchText(object) {
   return [
     object.title,
@@ -66,23 +48,35 @@ function objectSearchText(object) {
     .toLowerCase();
 }
 
-function scoreObject(object, keywords, seed) {
+function scoreObject(object, keywords, query) {
   const haystack = objectSearchText(object);
+  const title = String(object.title || "").toLowerCase();
+  const normalizedQuery = String(query || "").trim().toLowerCase();
   const matches = keywords.reduce(
     (total, keyword) => total + (haystack.includes(keyword.toLowerCase()) ? 1 : 0),
     0,
   );
-  const stableVariation =
-    (hashString(`${seed}:${object.objectID}`) % 1000) / 1000;
+  const titleMatch = normalizedQuery && title.includes(normalizedQuery) ? 10 : 0;
 
-  return matches * 5 + (object.isHighlight ? 2 : 0) + stableVariation;
+  return titleMatch + matches * 5 + (object.isHighlight ? 2 : 0);
+}
+
+export function rankMetObjects(objects, { keywords, query }) {
+  return objects
+    .map((object, searchIndex) => ({ object, searchIndex }))
+    .sort(
+      (a, b) =>
+        scoreObject(b.object, keywords, query) -
+          scoreObject(a.object, keywords, query) ||
+        a.searchIndex - b.searchIndex,
+    )
+    .map(({ object }) => object);
 }
 
 async function searchObjects(
   fetchFn,
   query,
   keywords,
-  seed,
   { highlightsOnly = true } = {},
 ) {
   const searchURL = new URL(`${MET_API}/v1.1/search`);
@@ -93,11 +87,7 @@ async function searchObjects(
 
   const result = await fetchJSON(fetchFn, searchURL);
   const ids = Array.isArray(result.objectIDs) ? result.objectIDs : [];
-  const selectedIds = rotateSelection(
-    ids,
-    hashString(`${query}:${seed}`),
-    OBJECT_LIMIT,
-  );
+  const selectedIds = ids.slice(0, OBJECT_LIMIT);
   const objects = await Promise.all(
     selectedIds.map(async (id) => {
       try {
@@ -108,15 +98,14 @@ async function searchObjects(
     }),
   );
 
-  return objects
-    .filter(
+  return rankMetObjects(
+    objects.filter(
       (object) =>
         object?.isPublicDomain === true &&
         /^https:\/\//.test(object.primaryImageSmall || ""),
-    )
-    .sort(
-      (a, b) => scoreObject(b, keywords, seed) - scoreObject(a, keywords, seed),
-    );
+    ),
+    { keywords, query },
+  );
 }
 
 function validateImageURL(value) {
@@ -165,19 +154,17 @@ export async function createMetImageInterlude({
   title,
   text,
   reflection,
-  visualSeed,
   fetchFn = fetch,
 }) {
   const search = deriveImageSearch({ title, text, reflection });
-  const seed = Number(visualSeed || hashString(`${title}\n${text}`)) >>> 0;
   let lastError = null;
 
   for (const query of search.queries.slice(0, 4)) {
     try {
-      let objects = await searchObjects(fetchFn, query, search.keywords, seed);
+      let objects = await searchObjects(fetchFn, query, search.keywords);
 
       if (!objects.length) {
-        objects = await searchObjects(fetchFn, query, search.keywords, seed, {
+        objects = await searchObjects(fetchFn, query, search.keywords, {
           highlightsOnly: false,
         });
       }

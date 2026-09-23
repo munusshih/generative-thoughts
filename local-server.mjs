@@ -1191,7 +1191,6 @@ async function handleAPI(req, res, url) {
         title: thought.title,
         text: thought.text,
         reflection: body.reflection,
-        visualSeed: thought.visualSeed,
       });
 
       sendJSON(res, 200, { imageInterlude });

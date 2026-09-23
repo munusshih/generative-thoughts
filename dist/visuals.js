@@ -6,6 +6,7 @@ import {
   hasInterludeRaster,
   sampleInterludeTone,
 } from "./visual/interlude-raster.js";
+import { interludeTextCell } from "./visual/interlude-tone.js";
 import {
   coverVisualCellThreshold,
   coverVisualRevealProgress,
@@ -18,8 +19,6 @@ const IMAGE_INTERLUDE_MAX_WIDTH_RATIO = 0.62;
 const IMAGE_INTERLUDE_MAX_HEIGHT_RATIO = 0.7;
 
 const IMAGE_INTERLUDE_FONT_SIZE = 15;
-
-const IMAGE_INTERLUDE_GLYPHS = [".", ":", "*", "o", "O", "0", "8", "#"];
 
 /* =========================================================
    PAGE
@@ -665,7 +664,7 @@ function createCoverBuffer(grid) {
   return createBuffer(grid, "_", "blank");
 }
 
-function setCell(buffer, row, col, char, kind) {
+function setCell(buffer, row, col, char, kind, color = null) {
   if (row < 0 || row >= buffer.length) {
     return;
   }
@@ -677,6 +676,7 @@ function setCell(buffer, row, col, char, kind) {
   buffer[row][col] = {
     char,
     kind,
+    color,
   };
 }
 
@@ -1747,6 +1747,8 @@ function renderBuffer(graphics, grid, buffer, theme) {
   for (let row = 0; row < grid.rows; row += 1) {
     let runKind = null;
 
+    let runColor = null;
+
     let runText = "";
 
     let runStart = 0;
@@ -1757,11 +1759,12 @@ function renderBuffer(graphics, grid, buffer, theme) {
       }
 
       graphics.fill(
-        runKind === "blank"
-          ? theme.dim
-          : runKind === "art"
-            ? theme.art
-            : theme.text,
+        runColor ||
+          (runKind === "blank"
+            ? theme.dim
+            : runKind === "art"
+              ? theme.art
+              : theme.text),
       );
 
       graphics.text(
@@ -1780,16 +1783,22 @@ function renderBuffer(graphics, grid, buffer, theme) {
 
       const kind = cell?.kind || "blank";
 
+      const color = cell?.color || null;
+
       const char = cell?.char ?? "_";
 
       if (runKind === null) {
         runKind = kind;
 
+        runColor = color;
+
         runStart = col;
-      } else if (kind !== runKind) {
+      } else if (kind !== runKind || color !== runColor) {
         flush();
 
         runKind = kind;
+
+        runColor = color;
 
         runStart = col;
       }
@@ -1859,18 +1868,6 @@ function getImageInterludeGrid(graphics, interlude) {
   };
 }
 
-function imageInterludeGlyph(tone) {
-  const normalized = clamp((tone - 0.025) / 0.975, 0, 1);
-  const shaped = Math.pow(normalized, 0.82);
-  const index = clamp(
-    Math.floor(shaped * IMAGE_INTERLUDE_GLYPHS.length),
-    0,
-    IMAGE_INTERLUDE_GLYPHS.length - 1,
-  );
-
-  return normalized < 0.035 ? null : IMAGE_INTERLUDE_GLYPHS[index];
-}
-
 function writeImageInterlude(buffer, grid, interlude, state, slideIndex) {
   const reveal = publishRevealForSlide(state, slideIndex);
   const revealProgress = reveal?.progress ?? 1;
@@ -1889,16 +1886,11 @@ function writeImageInterlude(buffer, grid, interlude, state, slideIndex) {
       const u = col / Math.max(1, grid.cols - 1);
       const v = row / Math.max(1, grid.rows - 1);
       const tone = sampleInterludeTone(interlude, u, v);
-      const stripeGate = row % 2 === 0 ? 0.018 : -0.012;
-      const glyph = imageInterludeGlyph(clamp(tone + stripeGate, 0, 1));
+      const cell = interludeTextCell(tone);
 
-      setCell(
-        buffer,
-        row,
-        col,
-        glyph || (row % 2 === 0 ? "_" : " "),
-        glyph ? "art" : "blank",
-      );
+      if (cell) {
+        setCell(buffer, row, col, cell.glyph, "art", cell.color);
+      }
     }
   }
 }
@@ -2401,15 +2393,15 @@ export function drawSlide(index, state, graphics = state.p5) {
 
   const theme = getThemeForState(state);
 
-  graphics.background(theme.background);
-
-  drawBackgroundTexture(graphics, state);
-
   const slide = state.slides[index];
 
   if (!slide) {
     return;
   }
+
+  graphics.background(theme.background);
+
+  if (slide.type !== "image-interlude") drawBackgroundTexture(graphics, state);
 
   if (slide.type === "cover") {
     drawCover(graphics, state, index);
