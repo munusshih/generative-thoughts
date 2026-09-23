@@ -1,4 +1,4 @@
-import { saveAnalysis } from "../archive.js";
+import { findImageInterlude, saveAnalysis } from "../archive.js";
 
 export function createAnalysisSession({
   state,
@@ -33,10 +33,22 @@ export function createAnalysisSession({
         throw new Error("The writing changed. Run analysis again.");
       }
 
+      showProgress({ stage: "finding-image", overallPercent: 96 });
+      const imageResult = await findImageInterlude({
+        id: state.id,
+        sourceUpdatedAt: state.updatedAt,
+        reflection: local.synthesis?.reflection || "",
+      });
+
+      if (revision !== state.revision || analysisContext !== state.contextVersion) {
+        throw new Error("The writing changed. Run analysis again.");
+      }
+
       showProgress({ stage: "saving-analysis", overallPercent: 98 });
       const stored = await saveAnalysis({
         id: state.id,
         sourceUpdatedAt: state.updatedAt,
+        imageInterlude: imageResult.imageInterlude || null,
         ...local,
       });
 

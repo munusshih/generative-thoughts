@@ -418,6 +418,24 @@ function publicationMarkdown(state) {
   }
 
   const trace = state.machineAnalysis?.trace || null;
+  const imageInterlude = state.machineAnalysis?.imageInterlude || null;
+
+  if (imageInterlude?.objectUrl) {
+    const imageCredit = [
+      imageInterlude.objectTitle || "Untitled",
+      imageInterlude.artist || imageInterlude.culture || "Unknown maker",
+      imageInterlude.date || null,
+    ]
+      .filter(Boolean)
+      .join(" — ");
+
+    output.push(
+      "## Image synthesis source",
+      `[${imageCredit}](${imageInterlude.objectUrl})`,
+      `Search: ${imageInterlude.query || imageInterlude.keywords?.[0] || ""}`,
+      "Source: The Metropolitan Museum of Art Open Access",
+    );
+  }
 
   if (trace) {
     output.push(
@@ -427,6 +445,7 @@ function publicationMarkdown(state) {
         {
           trace,
           modelProvenance: state.machineAnalysis?.modelProvenance || null,
+          imageInterlude,
         },
         null,
         2,

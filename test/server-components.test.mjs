@@ -34,6 +34,12 @@ import {
   requireLocalModelId,
 } from "../dist/model-config.js";
 import { recoverPublishedAnalysis } from "../server/legacy-analysis.mjs";
+import { deriveImageSearch } from "../server/image-keywords.mjs";
+import { normalizeImageInterlude } from "../server/met-image.mjs";
+import {
+  hasInterludeRaster,
+  sampleInterludeTone,
+} from "../dist/visual/interlude-raster.js";
 import {
   coverVisualCellThreshold,
   coverVisualRevealProgress,
@@ -243,6 +249,93 @@ test("current published synthesis recovery excludes the trace section", () => {
   );
 });
 
+test("published synthesis recovery excludes image credit and restores its raster", () => {
+  const raster = {
+    source: "The Metropolitan Museum of Art",
+    query: "moon",
+    keywords: ["moon", "night"],
+    objectId: 42,
+    objectTitle: "Moon study",
+    artist: "Unknown maker",
+    objectUrl: "https://www.metmuseum.org/art/collection/search/42",
+    imageUrl: "https://images.metmuseum.org/example.jpg",
+    publicDomain: true,
+    raster: { width: 2, height: 2, data: Buffer.from([0, 64, 128, 255]).toString("base64") },
+  };
+  const markdown = [
+    "# A thought",
+    "",
+    "source",
+    "",
+    "## Local model note",
+    "",
+    "Recovered reflection.",
+    "",
+    "## Image synthesis source",
+    "",
+    "[Moon study](https://www.metmuseum.org/art/collection/search/42)",
+    "",
+    "## Local model trace",
+    "",
+    "```json",
+    JSON.stringify({ trace: {}, imageInterlude: raster }),
+    "```",
+  ].join("\n");
+
+  const recovered = recoverPublishedAnalysis(markdown, {
+    title: "A thought",
+    text: "source",
+  });
+
+  assert.equal(recovered.reflection, "Recovered reflection.");
+  assert.deepEqual(recovered.imageInterlude, raster);
+});
+
+test("image search favors title and repeated source terms over AI wording", () => {
+  const search = deriveImageSearch({
+    title: "Orbit",
+    text: "stone stone stone shadow shadow vessel",
+    reflection: "machine machine machine machine machine machine",
+  });
+
+  assert.deepEqual(search.keywords.slice(0, 3), ["orbit", "stone", "shadow"]);
+  assert.ok(search.keywords.indexOf("machine") > search.keywords.indexOf("shadow"));
+  assert.equal(search.queries[0], "orbit");
+});
+
+test("image interlude normalization requires a complete public-domain raster", () => {
+  const encoded = Buffer.from([0, 64, 128, 255]).toString("base64");
+  const normalized = normalizeImageInterlude({
+    publicDomain: true,
+    query: "moon",
+    raster: { width: 2, height: 2, data: encoded },
+  });
+
+  assert.equal(normalized.raster.data, encoded);
+  assert.equal(normalizeImageInterlude({
+    publicDomain: false,
+    raster: { width: 2, height: 2, data: encoded },
+  }), null);
+  assert.equal(normalizeImageInterlude({
+    publicDomain: true,
+    raster: { width: 3, height: 2, data: encoded },
+  }), null);
+});
+
+test("image interlude raster sampler preserves light and dark structure", () => {
+  const interlude = {
+    raster: {
+      width: 2,
+      height: 2,
+      data: Buffer.from([0, 255, 255, 255]).toString("base64"),
+    },
+  };
+
+  assert.equal(hasInterludeRaster(interlude), true);
+  assert.ok(sampleInterludeTone(interlude, 0, 0) > 0.85);
+  assert.ok(sampleInterludeTone(interlude, 1, 1) < 0.3);
+});
+
 test("local AI model IDs are explicit and blank IDs are rejected", () => {
   assert.equal(
     AI_MODELS.synthesisModel,
@@ -305,11 +398,18 @@ test("analysis progress is labeled and never moves backward", () => {
   assert.equal(view.label, "WRITING SYNTHESIS");
   assert.equal(view.percent, 71);
 
+  view = analysisProgressView({ stage: "finding-image" }, view);
+  assert.deepEqual(view, {
+    label: "FINDING SOURCE IMAGE",
+    percent: 96,
+    rank: 6,
+  });
+
   view = analysisProgressView({ stage: "saved" }, view);
   assert.deepEqual(view, {
     label: "ANALYSIS COMPLETE",
     percent: 100,
-    rank: 7,
+    rank: 8,
   });
 });
 

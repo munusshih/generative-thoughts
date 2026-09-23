@@ -28,6 +28,10 @@ import {
   writeTextAtomic,
 } from "./server/atomic-files.mjs";
 import { recoverPublishedAnalysis } from "./server/legacy-analysis.mjs";
+import {
+  createMetImageInterlude,
+  normalizeImageInterlude,
+} from "./server/met-image.mjs";
 import { openSystemTarget } from "./server/system-open.mjs";
 import { AI_MODELS } from "./dist/model-config.js";
 
@@ -398,6 +402,7 @@ async function recoverAnalysisFromPublication(thought) {
         synthesis: {
           reflection: recovered.reflection,
         },
+        imageInterlude: normalizeImageInterlude(recovered.imageInterlude),
         trace: null,
         modelProvenance: null,
         nearest: [],
@@ -1161,6 +1166,47 @@ async function handleAPI(req, res, url) {
   }
 
   /* ---------------------------------------------------------
+     SELECT A PUBLIC-DOMAIN IMAGE INTERLUDE
+     --------------------------------------------------------- */
+
+  if (req.method === "POST" && url.pathname === "/api/image-interlude") {
+    const body = await readBody(req);
+    const thought = body.id ? await getThought(body.id) : null;
+
+    if (!thought) {
+      sendJSON(res, 404, { error: "NOT_FOUND" });
+      return true;
+    }
+
+    if (body.sourceUpdatedAt && body.sourceUpdatedAt !== thought.updatedAt) {
+      sendJSON(res, 409, {
+        error: "STALE_ANALYSIS",
+        message: "The writing changed before its image could be selected.",
+      });
+      return true;
+    }
+
+    try {
+      const imageInterlude = await createMetImageInterlude({
+        title: thought.title,
+        text: thought.text,
+        reflection: body.reflection,
+        visualSeed: thought.visualSeed,
+      });
+
+      sendJSON(res, 200, { imageInterlude });
+    } catch (error) {
+      console.warn("Image interlude unavailable:", error.message || error);
+      sendJSON(res, 200, {
+        imageInterlude: null,
+        warning: error.message || "IMAGE_INTERLUDE_UNAVAILABLE",
+      });
+    }
+
+    return true;
+  }
+
+  /* ---------------------------------------------------------
      SAVE ANALYSIS
      --------------------------------------------------------- */
 
@@ -1258,6 +1304,8 @@ async function handleAPI(req, res, url) {
       embedding: body.embedding,
 
       synthesis: body.synthesis || null,
+
+      imageInterlude: normalizeImageInterlude(body.imageInterlude),
 
       /*
     KEEP THE LOCAL MODEL TRACE.

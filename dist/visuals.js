@@ -3,6 +3,10 @@ import { LAYOUT, PRINT_FONT, TYPE } from "./config.js";
 import { analyzeText, clamp, lerp, pad, stringSeed } from "./helpers.js";
 import { evaluateImageField, getShapeImage } from "./visual/image-field.js";
 import {
+  hasInterludeRaster,
+  sampleInterludeTone,
+} from "./visual/interlude-raster.js";
+import {
   coverVisualCellThreshold,
   coverVisualRevealProgress,
 } from "./visual/cover-reveal.js";
@@ -1808,6 +1812,49 @@ function drawCover(graphics, state, slideIndex = 0) {
 }
 
 /* =========================================================
+   IMAGE INTERLUDE
+   ========================================================= */
+
+function writeImageInterlude(buffer, grid, interlude, state) {
+  const system = getVisualSystem(state);
+
+  for (let row = 0; row < grid.rows; row += 1) {
+    for (let col = 0; col < grid.cols; col += 1) {
+      const u = col / Math.max(1, grid.cols - 1);
+      const v = row / Math.max(1, grid.rows - 1);
+      const tone = sampleInterludeTone(interlude, u, v);
+      const stripeGate = row % 2 === 0 ? 0.02 : -0.035;
+      const glyph = glyphFromValue(system, clamp(tone + stripeGate, 0, 1));
+
+      if (glyph !== null) setCell(buffer, row, col, glyph, "art");
+    }
+  }
+
+  const query = String(interlude.query || interlude.keywords?.[0] || "image");
+  const title = String(interlude.objectTitle || "Untitled");
+  const artist = String(interlude.artist || interlude.culture || "Unknown maker");
+  const date = String(interlude.date || "");
+  const footer = [artist, date].filter(Boolean).join(" / ");
+
+  writeString(buffer, 0, 0, `image synthesis / ${query}`.slice(0, grid.cols));
+  writeString(buffer, grid.rows - 3, 0, title.slice(0, grid.cols));
+  writeString(buffer, grid.rows - 2, 0, footer.slice(0, grid.cols));
+  writeString(
+    buffer,
+    grid.rows - 1,
+    0,
+    `the met / open access / ${interlude.objectId || ""}`.slice(0, grid.cols),
+  );
+}
+
+function drawImageInterlude(graphics, slide, state) {
+  const grid = getGrid(graphics);
+  const buffer = createCoverBuffer(grid);
+  writeImageInterlude(buffer, grid, slide.imageInterlude, state);
+  renderBuffer(graphics, grid, buffer, getThemeForState(state));
+}
+
+/* =========================================================
    BODY PAGINATION
    ========================================================= */
 
@@ -2110,6 +2157,7 @@ function paginateSynthesis(graphics, state) {
 
 export function buildSlides(state, graphics) {
   const activeGraphics = graphics || state.p5;
+  const imageInterlude = state.machineAnalysis?.imageInterlude || null;
 
   state.slides = [
     {
@@ -2117,6 +2165,10 @@ export function buildSlides(state, graphics) {
     },
 
     ...paginateGridText(activeGraphics, state.text),
+
+    ...(hasInterludeRaster(imageInterlude)
+      ? [{ type: "image-interlude", imageInterlude }]
+      : []),
 
     ...paginateSynthesis(activeGraphics, state),
   ];
@@ -2296,6 +2348,11 @@ export function drawSlide(index, state, graphics = state.p5) {
   if (slide.type === "text") {
     drawTextSlide(graphics, slide, state);
 
+    return;
+  }
+
+  if (slide.type === "image-interlude") {
+    drawImageInterlude(graphics, slide, state);
     return;
   }
 

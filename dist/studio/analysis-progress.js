@@ -4,9 +4,10 @@ const STAGES = {
   loading: { label: "LOADING LOCAL MODEL", percent: 10, rank: 3 },
   generating: { label: "WRITING SYNTHESIS", percent: 48, rank: 4 },
   retrying: { label: "REFINING SYNTHESIS", percent: 58, rank: 4 },
-  complete: { label: "FINALIZING ANALYSIS", percent: 96, rank: 5 },
-  "saving-analysis": { label: "SAVING ANALYSIS", percent: 98, rank: 6 },
-  saved: { label: "ANALYSIS COMPLETE", percent: 100, rank: 7 },
+  complete: { label: "FINALIZING ANALYSIS", percent: 94, rank: 5 },
+  "finding-image": { label: "FINDING SOURCE IMAGE", percent: 96, rank: 6 },
+  "saving-analysis": { label: "SAVING ANALYSIS", percent: 98, rank: 7 },
+  saved: { label: "ANALYSIS COMPLETE", percent: 100, rank: 8 },
 };
 
 export function initialAnalysisProgress() {
